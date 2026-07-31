@@ -1,0 +1,6 @@
+# Copy these keys into ~/.hermes/config.yaml (NOT into hermes-agent repo).
+# Then run: hermes plugins enable seo-agent
+
+plugins:
+  enabled:
+    - seo-agent

@@ -1,0 +1,13 @@
+name: seo-agent
+version: 0.1.0
+description: >
+  AI SEO Agent tools — audit websites, optimize pages, generate reports,
+  and compare historical audits. Backed by the standalone SEO-Agent engine.
+author: SEO-Agent
+kind: standalone
+provides_tools:
+  - audit_site
+  - optimize_page
+  - generate_report
+  - compare_audits
+  - list_seo_history

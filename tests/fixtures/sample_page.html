@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sample SEO Page With Enough Title Length</title>
+  <meta name="description" content="A sample page used for SEO extractor tests with a meta description long enough for quality checks." />
+  <meta property="og:title" content="Sample OG Title For Fallback Testing" />
+  <meta property="og:description" content="Open Graph description used for fallback coverage in SEO extractor tests." />
+  <meta name="twitter:title" content="Sample Twitter Title" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://example.com/sample" />
+  <script type="application/ld+json">
+    {
+      "@context":"https://schema.org",
+      "@graph":[
+        {"@type":"WebPage","name":"Sample SEO Page"},
+        {"@type":"Organization","name":"Example Org"}
+      ]
+    }
+  </script>
+</head>
+<body>
+  <h1>Welcome to Sample SEO Page</h1>
+  <h2>Features</h2>
+  <h3>Details</h3>
+  <p>Content goes here with enough words for extractor word-count checks and crawler thin-content heuristics.</p>
+  <img src="/images/hero.jpg" alt="Hero image" />
+  <img src="/images/missing-alt.jpg" />
+  <img srcset="/images/responsive.webp 1x, /images/responsive@2x.webp 2x" alt="Responsive" />
+  <a href="/about">About</a>
+  <a href="/about">About again</a>
+  <a href="https://external.example/path">External</a>
+  <a href="mailto:hello@example.com">Email</a>
+  <a href="#section">Skip fragment</a>
+</body>
+</html>

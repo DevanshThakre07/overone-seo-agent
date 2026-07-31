@@ -1,0 +1,42 @@
+crawl:
+  max_pages: 50
+  max_depth: 3
+  timeout_seconds: 15
+  concurrency: 5
+  delay_seconds: 0.25
+  user_agent: "SEO-Agent/0.1 (+https://github.com/local/seo-agent)"
+  respect_robots: true
+  max_redirects: 5
+  same_host_only: true
+  check_external_links: true
+  max_external_link_checks: 100
+
+playwright:
+  enabled: false
+  timeout_ms: 30000
+  wait_until: "networkidle"
+
+analyzer:
+  page_size_threshold_bytes: 3145728  # 3 MB
+  scoring:
+    base_score: 100
+    weights:
+      critical: 8
+      warning: 3
+      info: 1
+
+storage:
+  backend: sqlite
+  path: data/audits.db
+
+llm:
+  provider: openai_compatible
+  base_url: https://api.openai.com/v1
+  model: gpt-4o-mini
+  temperature: 0.3
+  timeout_seconds: 60
+  optimize_max_pages: 5
+
+logging:
+  level: INFO
+  json_logs: true
