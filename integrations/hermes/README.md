@@ -53,16 +53,22 @@ It never writes into `AI-AGENT-Projects/hermes-agent/`.
 
 | Tool | Purpose |
 |---|---|
-| `audit_site` | Crawl + SEO audit (optional save/compare/optimize) |
+| `audit_site` | Crawl + SEO audit (optional save/compare/optimize/PageSpeed) |
+| `check_pagespeed` | PageSpeed Insights / Core Web Vitals for a URL |
+| `research_keywords` | DataForSEO search volume / CPC / competition |
 | `optimize_page` | AI page suggestions |
+| `keyword_plan` | Keyword placement gaps on a live page |
 | `generate_report` | Markdown/JSON report |
 | `compare_audits` | Diff vs previous audit |
+| `confirm_site_sources` | Lift write firewall for user-named local source files |
 | `list_seo_history` | List saved audits |
 
 ## Requirements
 
 - SEO-Agent installed in its venv (`pip install -e ".[dev]"`)
 - SEO-Agent `.env` with `OPENAI_API_KEY` for optimize
+- `GOOGLE_PAGESPEED_API_KEY` for `check_pagespeed` / audit CWV enrichment
+- `KEYWORD_API_PROVIDER=dataforseo` + login/password for `research_keywords`
 - Hermes can import the SEO-Agent `app` package (plugin adds SEO-Agent root to `sys.path`)
 
 ## Optional: HTTP instead of in-process

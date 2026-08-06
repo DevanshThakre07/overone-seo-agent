@@ -132,8 +132,11 @@ class HtmlExtractor:
             "heading_count": len(h1) + len(h2) + len(h3) + len(h4) + len(h5) + len(h6),
             "image_count": len(images),
             "images_missing_alt": sum(
-                1 for img in images if img.alt is None or not str(img.alt).strip()
+                1
+                for img in images
+                if not img.alt_present and not img.decorative and not img.is_source
             ),
+            "images_decorative": sum(1 for img in images if img.decorative),
             "unique_internal_links": len(internal),
             "unique_external_links": len(external),
             "internal_link_occurrences": internal_occurrences,
@@ -189,8 +192,12 @@ class HtmlExtractor:
             external_link_occurrences=external_occurrences,
             image_count=len(images),
             js_rendered=crawl_result.js_rendered,
+            text_sample=visible_text[:5000],
             extraction_warnings=warnings,
-            seo_signals=seo_signals,
+            seo_signals={
+                **seo_signals,
+                "render_diagnostics": crawl_result.render_diagnostics or {},
+            },
         )
 
     def extract_many(
@@ -272,7 +279,14 @@ class HtmlExtractor:
                 continue
             seen.add(resolved)
             alt = img.get("alt")
-            images.append(ImageInfo(src=resolved, alt=alt if alt is not None else None))
+            images.append(
+                ImageInfo(
+                    src=resolved,
+                    alt=alt if alt is not None else None,
+                    alt_present=alt is not None,
+                    decorative=self._is_decorative(img, alt),
+                )
+            )
 
         # <picture><source srcset=...> without a usable <img src>
         for source in soup.find_all("source"):
@@ -286,9 +300,28 @@ class HtmlExtractor:
             if resolved in seen:
                 continue
             seen.add(resolved)
-            images.append(ImageInfo(src=resolved, alt=None))
+            images.append(ImageInfo(src=resolved, alt=None, is_source=True))
 
         return images
+
+    @staticmethod
+    def _is_decorative(img: Tag, alt: str | None) -> bool:
+        """Images that correctly have no accessible name.
+
+        Per WAI-ARIA, alt="", role="presentation"/"none" and aria-hidden="true"
+        all mark an image as decorative. 1x1 images are tracking pixels.
+        """
+        if alt is not None and alt == "":
+            return True
+        if str(img.get("role", "")).strip().lower() in {"presentation", "none"}:
+            return True
+        if str(img.get("aria-hidden", "")).strip().lower() == "true":
+            return True
+        for attr in ("width", "height"):
+            raw = str(img.get(attr, "")).strip().rstrip("px")
+            if raw.isdigit() and int(raw) <= 1:
+                return True
+        return False
 
     def _image_src(self, img: Tag) -> str:
         for attr in _IMG_SRC_ATTRS:

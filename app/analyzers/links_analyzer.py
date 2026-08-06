@@ -61,7 +61,9 @@ class LinksAnalyzer:
                 issues.append(
                     Issue(
                         code="redirect_chain",
-                        severity=Severity.WARNING,
+                        # Informational: locale/trailing-slash/https redirects are
+                        # normal. Reported for visibility, not scored as a defect.
+                        severity=Severity.INFO,
                         message=f"Redirect chain with {len(page.redirect_chain)} hops",
                         url=page.url,
                         details={"chain": page.redirect_chain},

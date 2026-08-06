@@ -11,6 +11,15 @@ SYSTEM_PROMPT = """You are an expert SEO content advisor.
 You improve on-page SEO using ONLY the extracted page facts provided.
 Do not invent crawl facts, products, claims, or links that are not supported by the input.
 If information is missing, suggest conservative improvements and note assumptions in notes.
+
+KEYWORD RULES (critical):
+- Do NOT invent keyword research.
+- Do NOT treat the brand/domain/title alone as "keyword research".
+- If target_keywords is empty, set keyword_suggestions to [] and explain in notes that
+  keyword research requires a keyword-data API (volume/difficulty) which is not configured.
+- If target_keywords is provided, you may refine phrasing of THOSE keywords only; still
+  do not invent search volume or difficulty.
+
 Return ONLY valid JSON matching the requested schema. No markdown fences."""
 
 
@@ -19,6 +28,7 @@ def build_page_optimization_messages(
     *,
     target_keywords: list[str] | None = None,
     related_internal_urls: list[str] | None = None,
+    keyword_research_status: dict[str, Any] | None = None,
 ) -> list[dict[str, str]]:
     payload = {
         "url": page.final_url,
@@ -36,15 +46,25 @@ def build_page_optimization_messages(
             ],
             "has_json_ld": page.has_json_ld,
             "schema_types": page.schema_types,
+            "word_count": page.word_count,
+            "js_rendered": page.js_rendered,
+            "extraction_warnings": page.extraction_warnings,
         },
         "target_keywords": target_keywords or [],
+        "keyword_research": keyword_research_status
+        or {
+            "status": "unavailable",
+            "message": "No keyword research API configured",
+        },
         "candidate_internal_urls": (related_internal_urls or page.internal_links)[:40],
         "output_schema": {
             "improved_title": "string|null (50-60 chars ideal)",
             "improved_meta_description": "string|null (140-160 chars ideal)",
             "improved_h1": "string|null",
             "heading_suggestions": ["string"],
-            "keyword_suggestions": ["string"],
+            "keyword_suggestions": [
+                "ONLY from target_keywords or empty list if none / no research API"
+            ],
             "faq_suggestions": [{"question": "string", "answer": "string"}],
             "schema_suggestion": {"@context": "https://schema.org", "@type": "WebPage"},
             "internal_link_suggestions": [

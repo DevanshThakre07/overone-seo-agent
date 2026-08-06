@@ -45,4 +45,4 @@ fi
 
 echo ""
 echo "Done. Restart Hermes / start a new session so tools load."
-echo "Tools: audit_site, optimize_page, generate_report, compare_audits, list_seo_history"
+echo "Tools: audit_site, check_pagespeed, research_keywords, optimize_page, keyword_plan, generate_report, compare_audits, list_seo_history"

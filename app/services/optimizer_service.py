@@ -11,9 +11,13 @@ from app.models.optimization import (
     PageOptimization,
 )
 from app.models.page import PageExtraction
+from app.optimizer.keyword_research import normalize_caller_keywords
 from app.optimizer.llm_client import LLMClient, LLMError, OpenAICompatibleClient
 from app.optimizer.prompts import build_page_optimization_messages, parse_optimization_json
 from app.services.crawler_service import CrawlerService
+from app.services.keyword_planner import analyze_keyword_placement, humanize_fetch_error
+from app.utils.integrity import check_url_integrity
+from app.utils.scope_guard import build_write_policy
 
 logger = get_logger(__name__)
 
@@ -45,25 +49,76 @@ class OptimizerService:
         try:
             page_data = page or self._fetch_page(url)
             if page_data.is_broken:
+                reason = humanize_fetch_error(page_data.error)
+                disclaimer = (
+                    f"Could not fetch {url} ({reason}) — no analysis was performed. "
+                    "Any advice given without this fetch would be generic, NOT "
+                    "site-specific. Do not substitute local files or prior knowledge "
+                    "for the live page."
+                )
+                log_event(logger, "optimize_fetch_failed", url=url, error=reason)
                 return OptimizationResult(
                     url=url,
                     status="error",
-                    message=page_data.error or "Page could not be fetched",
+                    message=disclaimer,
+                    live_fetch={"ok": False, "url": url, "error": reason},
+                    analysis_is_site_specific=False,
+                    disclaimer=disclaimer,
+                    write_policy=build_write_policy(url),
                 )
 
             related = related_internal_urls or page_data.internal_links
+            keyword_meta = normalize_caller_keywords(target_keywords)
             optimized = self._optimize_extraction(
                 page_data,
-                target_keywords=target_keywords,
+                target_keywords=keyword_meta["keywords"] or None,
                 related_internal_urls=related,
+                keyword_research_status=keyword_meta,
             )
+            # Never present invented / scraped words as researched keywords.
+            if not keyword_meta.get("is_real_research"):
+                if keyword_meta["status"] != "caller_provided_not_researched":
+                    optimized.keyword_suggestions = []
+                optimized.notes = list(optimized.notes) + [
+                    keyword_meta.get("message")
+                    or keyword_meta.get("research", {}).get("message")
+                    or "Keyword research API is not configured."
+                ]
+            placement = analyze_keyword_placement(page_data, keyword_meta["keywords"])
             result = OptimizationResult(
                 url=page_data.final_url,
                 status="ok",
-                message="Optimization suggestions generated",
-                target_keywords=target_keywords or [],
+                message="Optimization suggestions generated from a live fetch of the page",
+                target_keywords=keyword_meta["keywords"],
+                keyword_research=keyword_meta,
                 page=optimized,
                 pages=[optimized],
+                live_fetch={
+                    "ok": True,
+                    "url": url,
+                    "final_url": page_data.final_url,
+                    "status_code": page_data.status_code,
+                    "js_rendered": page_data.js_rendered,
+                    "method": "playwright" if page_data.js_rendered else "http",
+                    "word_count": page_data.word_count,
+                },
+                page_evidence={
+                    "title": page_data.title,
+                    "meta_description": page_data.meta_description,
+                    "h1": page_data.h1,
+                    "h2": page_data.h2[:10],
+                    "word_count": page_data.word_count,
+                    "text_excerpt": (page_data.text_sample or "")[:400],
+                },
+                url_integrity=check_url_integrity(
+                    url, [page_data.final_url], redirect_chains=[page_data.redirect_chain]
+                ),
+                keyword_placement={
+                    "findings": placement[0],
+                    "placements": placement[1],
+                },
+                analysis_is_site_specific=True,
+                write_policy=build_write_policy(url),
             )
             log_event(logger, "optimize_completed", url=page_data.final_url)
             return result
@@ -88,17 +143,26 @@ class OptimizerService:
         )
         pages_out: list[PageOptimization] = []
         errors: list[str] = []
+        keyword_meta = normalize_caller_keywords(target_keywords)
 
         candidates = [p for p in audit.pages if not p.is_broken][:max_pages]
         for page in candidates:
             try:
-                pages_out.append(
-                    self._optimize_extraction(
-                        page,
-                        target_keywords=target_keywords,
-                        related_internal_urls=related,
-                    )
+                optimized = self._optimize_extraction(
+                    page,
+                    target_keywords=keyword_meta["keywords"] or None,
+                    related_internal_urls=related,
+                    keyword_research_status=keyword_meta,
                 )
+                if not keyword_meta.get("is_real_research"):
+                    if keyword_meta["status"] != "caller_provided_not_researched":
+                        optimized.keyword_suggestions = []
+                    optimized.notes = list(optimized.notes) + [
+                        keyword_meta.get("message")
+                        or keyword_meta.get("research", {}).get("message")
+                        or "Keyword research API is not configured."
+                    ]
+                pages_out.append(optimized)
             except LLMError as exc:
                 errors.append(f"{page.final_url}: {exc}")
 
@@ -111,7 +175,8 @@ class OptimizerService:
             url=audit.seed_url,
             status=status,
             message=message,
-            target_keywords=target_keywords or [],
+            target_keywords=keyword_meta["keywords"],
+            keyword_research=keyword_meta,
             page=pages_out[0] if pages_out else None,
             pages=pages_out,
         )
@@ -149,11 +214,13 @@ class OptimizerService:
         *,
         target_keywords: list[str] | None,
         related_internal_urls: list[str] | None,
+        keyword_research_status: dict | None = None,
     ) -> PageOptimization:
         messages = build_page_optimization_messages(
             page,
             target_keywords=target_keywords,
             related_internal_urls=related_internal_urls,
+            keyword_research_status=keyword_research_status,
         )
         raw = self.llm.complete(messages)
         data = parse_optimization_json(raw)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -19,6 +21,7 @@ class CrawlResult(BaseModel):
     depth: int = 0
     elapsed_ms: float = 0.0
     js_rendered: bool = False
+    render_diagnostics: dict[str, Any] = Field(default_factory=dict)
 
     @property
     def is_broken(self) -> bool:

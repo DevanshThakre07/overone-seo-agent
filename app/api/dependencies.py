@@ -29,3 +29,24 @@ def get_memory_service() -> MemoryService:
 
 def get_report_service() -> ReportService:
     return ReportService(repository=get_audit_repository())
+
+
+@lru_cache(maxsize=1)
+def get_gsc_service():
+    from app.integrations.google.service import GoogleSearchConsoleService
+
+    return GoogleSearchConsoleService(get_settings())
+
+
+@lru_cache(maxsize=1)
+def get_pagespeed_service():
+    from app.integrations.google.pagespeed_service import PageSpeedService
+
+    return PageSpeedService(get_settings())
+
+
+@lru_cache(maxsize=1)
+def get_keyword_research_service():
+    from app.integrations.dataforseo.service import KeywordResearchService
+
+    return KeywordResearchService(get_settings())

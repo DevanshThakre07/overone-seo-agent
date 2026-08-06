@@ -12,9 +12,11 @@ crawl:
   max_external_link_checks: 100
 
 playwright:
-  enabled: false
-  timeout_ms: 30000
-  wait_until: "networkidle"
+  # Prefer enabled=true for JS sites. SPA shells also auto-trigger when installed.
+  # wait_until uses domcontentloaded; content selectors + settle handle hydration.
+  enabled: true
+  timeout_ms: 45000
+  wait_until: "domcontentloaded"
 
 analyzer:
   page_size_threshold_bytes: 3145728  # 3 MB
@@ -24,6 +26,14 @@ analyzer:
       critical: 8
       warning: 3
       info: 1
+    # Page-level issues are scored by prevalence (share of crawled pages
+    # affected), not raw occurrence count, and the total is capped so a large
+    # crawl cannot drive the score to 0 by volume alone.
+    prevalence_scale: 3.0
+    max_page_level_penalty: 60.0
+    # Crawls smaller than this fall back to flat per-issue weighting, because
+    # prevalence is meaningless when every finding covers 100% of one page.
+    min_pages_for_prevalence: 5
 
 storage:
   backend: sqlite
@@ -40,3 +50,35 @@ llm:
 logging:
   level: INFO
   json_logs: true
+
+# Google Search Console — product-owner OAuth client (customers connect later).
+gsc:
+  enabled: true
+  client_secrets_file: secrets/google-oauth-client.json
+  redirect_uri: http://localhost:8000/auth/callback
+  token_db_path: data/gsc_tokens.db
+
+# PageSpeed Insights — Core Web Vitals / Lighthouse (API key, no OAuth).
+pagespeed:
+  enabled: true
+  # Set via GOOGLE_PAGESPEED_API_KEY in .env
+  strategy: mobile  # mobile | desktop | both
+  timeout_seconds: 90
+  performance_score_warn: 50
+  lcp_good_ms: 2500
+  cls_good: 0.1
+  inp_good_ms: 200
+
+# Keyword research — DataForSEO Keywords Data (volume / CPC / competition).
+keywords:
+  enabled: true
+  # provider/login/password via KEYWORD_API_* in .env
+  location_code: 2840  # United States
+  language_code: en
+  timeout_seconds: 60
+  max_keywords_per_request: 100
+  # Labs: difficulty + related ideas (same credentials)
+  labs_enabled: true
+  related_depth: 1
+  related_limit: 10
+  include_related_in_research: true

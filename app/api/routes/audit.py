@@ -22,6 +22,8 @@ def _run_audit(payload: AuditRequest) -> dict:
         optimize=payload.optimize,
         target_keywords=payload.target_keywords or None,
         optimize_max_pages=payload.optimize_max_pages,
+        gsc_account_id=payload.gsc_account_id,
+        pagespeed=payload.pagespeed,
     )
     return {
         "audit_id": audit.audit_id,

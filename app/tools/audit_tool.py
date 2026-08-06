@@ -16,6 +16,8 @@ def audit_site(
     optimize: bool = False,
     target_keywords: list[str] | None = None,
     optimize_max_pages: int | None = None,
+    gsc_account_id: str | None = None,
+    pagespeed: bool | None = None,
 ) -> SiteAudit:
     """Hermes-ready tool: run a full SEO audit and return SiteAudit."""
     settings = get_settings()
@@ -34,5 +36,7 @@ def audit_site(
             optimize=optimize,
             target_keywords=target_keywords or [],
             optimize_max_pages=optimize_max_pages or settings.llm.optimize_max_pages,
+            gsc_account_id=gsc_account_id,
+            pagespeed=pagespeed,
         ),
     )

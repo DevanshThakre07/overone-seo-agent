@@ -8,7 +8,16 @@ dist/
 build/
 .venv/
 venv/
+
+# Secrets / local env (never commit real keys)
 .env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+credentials*.json
+client_secret*.json
 
 # Tooling
 .pytest_cache/
@@ -27,3 +36,6 @@ out/
 *.json
 !config/*.yaml
 !tests/fixtures/**
+
+# Google OAuth client secrets (never commit)
+secrets/

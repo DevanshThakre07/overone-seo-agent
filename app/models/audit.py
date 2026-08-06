@@ -21,6 +21,11 @@ class AuditOptions(BaseModel):
     optimize: bool = False
     target_keywords: list[str] = Field(default_factory=list)
     optimize_max_pages: int = 5
+    # Customer id used for Connect Google / Search Console enrichment.
+    gsc_account_id: str | None = None
+    # Run PageSpeed Insights on the seed URL when an API key is configured.
+    # None = auto (run if GOOGLE_PAGESPEED_API_KEY is set).
+    pagespeed: bool | None = None
 
 
 class SiteAudit(BaseModel):

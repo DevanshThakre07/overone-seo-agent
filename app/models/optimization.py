@@ -34,5 +34,16 @@ class OptimizationResult(BaseModel):
     status: str = "ok"
     message: str = ""
     target_keywords: list[str] = Field(default_factory=list)
+    keyword_research: dict[str, Any] = Field(default_factory=dict)
     page: PageOptimization | None = None
     pages: list[PageOptimization] = Field(default_factory=list)
+    # Proof that suggestions came from the live page, not from guesswork.
+    live_fetch: dict[str, Any] = Field(default_factory=dict)
+    page_evidence: dict[str, Any] = Field(default_factory=dict)
+    url_integrity: dict[str, Any] = Field(default_factory=dict)
+    keyword_placement: dict[str, Any] = Field(default_factory=dict)
+    analysis_is_site_specific: bool = True
+    disclaimer: str | None = None
+    # Explicit scope contract: these suggestions are for an external site and
+    # must not be written into any local file (see app/utils/scope_guard.py).
+    write_policy: dict[str, Any] = Field(default_factory=dict)

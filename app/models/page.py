@@ -8,6 +8,13 @@ from pydantic import BaseModel, Field
 class ImageInfo(BaseModel):
     src: str
     alt: str | None = None
+    # alt="" is VALID HTML for decorative images and must not be reported as a
+    # missing attribute. These fields keep the two cases distinguishable.
+    alt_present: bool = False
+    decorative: bool = False
+    # <source> inside <picture> carries no alt attribute by spec — the alt lives
+    # on the sibling <img>, so these must be excluded from alt checks.
+    is_source: bool = False
 
 
 class PageExtraction(BaseModel):
@@ -48,5 +55,8 @@ class PageExtraction(BaseModel):
     external_link_occurrences: int = 0
     image_count: int = 0
     js_rendered: bool = False
+    # Bounded visible-text sample so downstream analysis (keyword presence,
+    # prompts) can work from real page copy without storing full documents.
+    text_sample: str = ""
     extraction_warnings: list[str] = Field(default_factory=list)
     seo_signals: dict[str, Any] = Field(default_factory=dict)

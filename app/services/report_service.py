@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.config.settings import PROJECT_ROOT
 from app.logging import get_logger, log_event
 from app.models.audit import SiteAudit
 from app.models.reports import ReportArtifact, ReportDocument, ReportFormat
 from app.reports.builder import build_report_document
 from app.reports.json_report import render_document_json, render_json
-from app.reports.markdown_report import render_document_markdown
+from app.reports.markdown_report import render_document_markdown, render_markdown
 from app.reports.pdf_report import PdfNotImplementedError, render_pdf
 from app.repositories.base import AuditRepository
 
@@ -38,7 +39,8 @@ class ReportService:
                 else render_document_json(document)
             )
         elif fmt == ReportFormat.MARKDOWN:
-            content = render_document_markdown(document)
+            # Use audit-aware renderer so scope/metrics/recommendations are included.
+            content = render_markdown(audit)
         elif fmt == ReportFormat.PDF:
             try:
                 raw = render_pdf(audit)
@@ -57,6 +59,7 @@ class ReportService:
                 "seed_url": audit.seed_url,
                 "score": f"{audit.score:.1f}",
                 "pages": str(len(audit.pages)),
+                "delivery": "inline_content",
             },
         )
 
@@ -87,7 +90,16 @@ class ReportService:
         return self.generate(audit, fmt, out_path=out_path)
 
     def write(self, artifact: ReportArtifact, path: Path) -> ReportArtifact:
+        path = Path(path)
+        if not path.is_absolute():
+            path = (PROJECT_ROOT / path).resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(artifact.content, encoding="utf-8")
-        artifact.path = str(path)
+        # Prefer project-relative path in responses (portable); fall back to name.
+        try:
+            artifact.path = str(path.relative_to(PROJECT_ROOT))
+        except ValueError:
+            artifact.path = path.name
+        artifact.metadata["delivery"] = "file_and_inline_content"
+        artifact.metadata["relative_path"] = artifact.path or ""
         return artifact

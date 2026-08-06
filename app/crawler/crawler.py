@@ -113,22 +113,50 @@ class WebsiteCrawler:
 
         html = fetch.text
         js_rendered = False
+        render_diagnostics: dict = {
+            "static_html_length": len(html or ""),
+            "looks_thin": False,
+            "looks_spa": False,
+            "playwright_attempted": False,
+        }
         # Upgrade via Playwright when the static HTML is thin OR looks like a
-        # client-rendered shell (common SPA root with almost no SEO tags).
+        # client-rendered shell. Auto-attempts Playwright for SPA shells when
+        # the package is installed, even if playwright.enabled is false.
+        looks_spa = self._looks_like_spa_shell(html)
+        looks_thin = self._looks_thin(html)
+        render_diagnostics["looks_thin"] = looks_thin
+        render_diagnostics["looks_spa"] = looks_spa
         if (
             not fetch.error
             and fetch.status_code
             and fetch.status_code < 400
-            and (self._looks_thin(html) or self._looks_like_spa_shell(html))
+            and (looks_thin or looks_spa)
         ):
-            pw_html = self.playwright.fetch(url)
-            if pw_html:
-                html = pw_html
+            render_diagnostics["playwright_attempted"] = True
+            pw_result = self.playwright.fetch_with_diagnostics(
+                url, force_for_spa=looks_spa or looks_thin
+            )
+            render_diagnostics["playwright"] = pw_result.diagnostics
+            render_diagnostics["playwright_error"] = pw_result.error
+            if pw_result.ok and pw_result.html:
+                html = pw_result.html
                 js_rendered = True
+                render_diagnostics["playwright_ok"] = True
+            else:
+                render_diagnostics["playwright_ok"] = False
+                log_event(
+                    logger,
+                    "playwright_render_failed",
+                    url=url,
+                    error=pw_result.error,
+                    stages=(pw_result.diagnostics or {}).get("stages"),
+                )
 
         body_len = len((html or "").encode("utf-8", errors="ignore"))
         # Prefer measured body size; Content-Length headers are often missing/wrong.
         content_length = body_len or fetch.content_length
+        render_diagnostics["final_html_length"] = body_len
+        render_diagnostics["js_rendered"] = js_rendered
 
         return CrawlResult(
             url=url,
@@ -141,6 +169,7 @@ class WebsiteCrawler:
             depth=depth,
             elapsed_ms=fetch.elapsed_ms,
             js_rendered=js_rendered,
+            render_diagnostics=render_diagnostics,
         )
 
     def _extract_links(self, html: str, base_url: str) -> list[str]:

@@ -76,16 +76,19 @@ def test_report_document_sections():
 def test_markdown_contains_required_headings():
     md = render_markdown(_sample_audit())
     for heading in (
+        "## Audit Scope",
         "## Summary",
         "## Critical Issues",
         "## Warnings",
         "## Suggestions",
+        "## Recommendations",
         "## Overall SEO Score",
         "## AI Optimization Suggestions",
     ):
         assert heading in md
     assert "88.0/100" in md or "88.0 / 100" in md
     assert "missing_title" in md
+    assert "SCOPE" in md or "analyzed" in md.lower()
 
 
 def test_report_service_json_and_markdown(tmp_path):
@@ -94,7 +97,9 @@ def test_report_service_json_and_markdown(tmp_path):
 
     md = service.generate(audit, ReportFormat.MARKDOWN, out_path=tmp_path / "r.md")
     assert md.path is not None
+    assert "/" not in md.path or not md.path.startswith("/")  # relative / basename only
     assert (tmp_path / "r.md").read_text().startswith("# SEO Audit Report")
+    assert md.metadata.get("delivery") in {"file_and_inline_content", "inline_content"}
 
     js = service.generate(audit, ReportFormat.JSON)
     assert '"overall_seo_score"' in js.content

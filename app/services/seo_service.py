@@ -5,16 +5,25 @@ from copy import deepcopy
 
 from app.analyzers.base import AnalysisContext
 from app.analyzers.metrics import build_structured_seo_metrics
+from app.analyzers.recommendations import build_prescriptive_recommendations
 from app.analyzers.registry import AnalyzerRegistry, build_default_registry
-from app.analyzers.scorer import aggregate_issues, compute_score, severity_counts
+from app.analyzers.rendering_guardrails import apply_rendering_guardrails
+from app.analyzers.scorer import (
+    aggregate_issues,
+    compute_score_breakdown,
+    severity_counts,
+)
 from app.config.settings import Settings, get_settings
 from app.extractor.html_extractor import HtmlExtractor
 from app.logging import get_logger, log_event
 from app.models.audit import AuditOptions, SiteAudit
+from app.models.issues import Issue, Severity
+from app.optimizer.keyword_research import normalize_caller_keywords
 from app.repositories.base import AuditRepository
 from app.services.crawler_service import CrawlerService
 from app.services.memory_service import MemoryService
 from app.services.optimizer_service import OptimizerService
+from app.utils.integrity import check_url_integrity
 from app.utils.url import normalize_url
 
 logger = get_logger(__name__)
@@ -63,8 +72,110 @@ class SeoService:
             )
             analyzer_results = self.registry.run_all(context)
             issues = aggregate_issues(analyzer_results)
-            score = compute_score(issues, settings.analyzer.scoring)
+
+            # Suppress false content findings on unrendered JS shells and surface
+            # a top-level rendering warning instead of burying it.
+            issues, analyzer_results, rendering_meta = apply_rendering_guardrails(
+                pages, issues, analyzer_results
+            )
+
+            # Defense-in-depth: never return data for a page other than the one
+            # that was asked for (guards against cross-run/cached mixups).
+            url_integrity = check_url_integrity(
+                url,
+                [p.final_url for p in pages],
+                redirect_chains=[p.redirect_chain for p in pages],
+            )
+            if not url_integrity["ok"]:
+                log_event(
+                    logger,
+                    "url_integrity_failed",
+                    requested=url,
+                    observed=url_integrity["observed_urls"],
+                )
+                issues.insert(
+                    0,
+                    Issue(
+                        code="url_integrity_mismatch",
+                        severity=Severity.CRITICAL,
+                        message=url_integrity["warning"],
+                        url=url,
+                        details={"observed_urls": url_integrity["observed_urls"]},
+                    ),
+                )
+
+            # PageSpeed Insights on the seed URL (optional, never fails the audit).
+            pagespeed_block: dict = {
+                "status": "skipped",
+                "message": "PageSpeed not requested for this audit.",
+            }
+            run_pagespeed = options.pagespeed
+            if run_pagespeed is None:
+                run_pagespeed = bool(
+                    settings.pagespeed.enabled and settings.pagespeed.api_key
+                )
+            if run_pagespeed:
+                try:
+                    from app.integrations.google.pagespeed_service import PageSpeedService
+
+                    pagespeed_block, psi_issues = PageSpeedService(settings).audit_enrichment(
+                        stats.seed_url,
+                        run=True,
+                    )
+                    issues.extend(psi_issues)
+                except Exception as exc:  # noqa: BLE001
+                    log_event(
+                        logger,
+                        "pagespeed_enrichment_exception",
+                        url=stats.seed_url,
+                        error=str(exc),
+                    )
+                    pagespeed_block = {
+                        "status": "error",
+                        "url": stats.seed_url,
+                        "message": str(exc),
+                    }
+            elif not settings.pagespeed.api_key:
+                pagespeed_block = {
+                    "status": "skipped",
+                    "message": (
+                        "GOOGLE_PAGESPEED_API_KEY is not set. "
+                        "Enable PageSpeed Insights API and add the key to get Core Web Vitals."
+                    ),
+                }
+
+            score_breakdown = compute_score_breakdown(
+                issues,
+                settings.analyzer.scoring,
+                pages_analyzed=len(pages),
+            )
+            raw_score = score_breakdown["score"]
+            rendering_incomplete = bool(rendering_meta.get("rendering_incomplete"))
+            # Do not present a confident score when the DOM was not rendered.
+            if rendering_incomplete:
+                score = raw_score  # retained for storage/debug only
+                score_status = "provisional"
+                score_note = (
+                    "PROVISIONAL — based on incomplete rendering data. "
+                    "Do not treat this score as a reliable SEO grade until "
+                    "Playwright successfully captures the rendered DOM."
+                )
+            else:
+                score = raw_score
+                score_status = "final"
+                score_note = None
             counts = severity_counts(issues)
+            recommendations = build_prescriptive_recommendations(pages)
+            scope = self._build_scope(stats.seed_url, pages, settings, stats)
+            render_diagnostics = [
+                {
+                    "url": p.final_url,
+                    "js_rendered": p.js_rendered,
+                    "word_count": p.word_count,
+                    "diagnostics": (p.seo_signals or {}).get("render_diagnostics") or {},
+                }
+                for p in pages
+            ]
 
             log_event(
                 logger,
@@ -82,6 +193,40 @@ class SeoService:
             )
 
             seo_metrics = build_structured_seo_metrics(pages, analyzer_results)
+            seo_metrics["rendering"] = {
+                **(seo_metrics.get("rendering") or {}),
+                **rendering_meta,
+            }
+
+            gsc_block: dict = {
+                "status": "skipped",
+                "message": (
+                    "No gsc_account_id provided. Technical crawl audit only. "
+                    "Customers connect Google via /auth/google/start, then pass "
+                    "their account_id to enrich with Search Console data."
+                ),
+            }
+            if options.gsc_account_id:
+                try:
+                    from app.integrations.google.service import GoogleSearchConsoleService
+
+                    gsc_block = GoogleSearchConsoleService(settings).audit_enrichment(
+                        options.gsc_account_id,
+                        stats.seed_url,
+                    )
+                except Exception as exc:  # noqa: BLE001 — never fail the audit on GSC
+                    log_event(
+                        logger,
+                        "gsc_enrichment_exception",
+                        account_id=options.gsc_account_id,
+                        error=str(exc),
+                    )
+                    gsc_block = {
+                        "status": "error",
+                        "account_id": options.gsc_account_id,
+                        "message": str(exc),
+                    }
+
             audit = SiteAudit(
                 seed_url=normalize_url(stats.seed_url),
                 score=score,
@@ -94,8 +239,22 @@ class SeoService:
                     "issues": len(issues),
                     "severity": counts,
                     "analyzers_run": self.registry.list_analyzers(),
-                    # Complete structured SEO JSON for reports / Hermes / LLM
                     "seo_metrics": seo_metrics,
+                    "scope": scope,
+                    "rendering": {
+                        **rendering_meta,
+                        "page_diagnostics": render_diagnostics,
+                    },
+                    "recommendations": recommendations,
+                    "score_status": score_status,
+                    "score_note": score_note,
+                    "raw_score": raw_score,
+                    "score_breakdown": score_breakdown,
+                    "url_integrity": url_integrity,
+                    # Always present so reports can never imply keywords were researched.
+                    "keyword_research": normalize_caller_keywords(options.target_keywords),
+                    "google_search_console": gsc_block,
+                    "pagespeed": pagespeed_block,
                 },
             )
 
@@ -108,6 +267,7 @@ class SeoService:
                     or settings.llm.optimize_max_pages,
                 )
                 audit.summary["optimization_status"] = audit.optimization.status
+                audit.summary["keyword_research"] = audit.optimization.keyword_research
 
             if options.compare and self.memory_service is not None:
                 audit.diff = self.memory_service.compare(audit, previous=previous)
@@ -146,3 +306,31 @@ class SeoService:
             settings.crawl.max_depth = options.max_depth
         self.crawler_service.settings = settings
         return settings
+
+    def _build_scope(self, seed_url: str, pages, settings: Settings, stats) -> dict:
+        live = [p for p in pages if not p.is_broken]
+        n = len(pages)
+        max_pages = settings.crawl.max_pages
+        max_depth = settings.crawl.max_depth
+        if n <= 1:
+            note = (
+                f"SCOPE LIMITATION: This audit analyzed only the given URL "
+                f"({seed_url}) — not a full-site crawl. "
+                f"Crawl limits were max_pages={max_pages}, max_depth={max_depth}."
+            )
+        else:
+            note = (
+                f"This audit analyzed {n} page(s) starting from {seed_url} "
+                f"(crawl limits: max_pages={max_pages}, max_depth={max_depth}; "
+                f"discovered≈{getattr(stats, 'pages_discovered', n)}). "
+                "This is not necessarily a complete site inventory."
+            )
+        return {
+            "seed_url": seed_url,
+            "pages_analyzed": n,
+            "pages_live": len(live),
+            "max_pages_limit": max_pages,
+            "max_depth_limit": max_depth,
+            "pages_discovered": getattr(stats, "pages_discovered", n),
+            "note": note,
+        }

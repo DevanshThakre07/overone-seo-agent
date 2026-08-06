@@ -9,14 +9,115 @@ from app.reports.builder import build_report_document
 def render_markdown(audit: SiteAudit) -> str:
     doc = build_report_document(audit)
     body = render_document_markdown(doc)
-    metrics = (audit.summary or {}).get("seo_metrics") or {}
-    if not metrics:
-        return body
-    return body.replace(
-        "## Overall SEO Score",
-        _render_seo_metrics_section(metrics) + "## Overall SEO Score",
-        1,
+    summary = audit.summary or {}
+
+    sections = ""
+    metrics = summary.get("seo_metrics") or {}
+    if metrics:
+        sections += _render_seo_metrics_section(metrics)
+    sections += _render_data_integrity_section(summary)
+    sections += _render_keyword_research_section(summary)
+
+    if sections:
+        body = body.replace("## Overall SEO Score", sections + "## Overall SEO Score", 1)
+    return _strip_diff_markers(body)
+
+
+def _strip_diff_markers(text: str) -> str:
+    """Guarantee clean markdown even if diff-formatted text reaches the renderer."""
+    lines = text.splitlines()
+    body = [ln for ln in lines if ln.strip()]
+    if body and all(ln.startswith(("+", "-")) for ln in body):
+        return "\n".join(ln[1:] if ln[:1] in {"+", "-"} else ln for ln in lines)
+    return text
+
+
+def _render_data_integrity_section(summary: dict) -> str:
+    integrity = summary.get("url_integrity") or {}
+    if not integrity:
+        return ""
+    lines = ["## Data Integrity", ""]
+    if integrity.get("ok") and integrity.get("exact_match"):
+        lines.append(
+            f"- Verified: results are for the requested URL "
+            f"({integrity.get('requested_url')})."
+        )
+    elif integrity.get("warning"):
+        lines.append(f"- **{integrity['warning']}**")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _render_keyword_research_section(summary: dict) -> str:
+    """Report research status; show metrics when DataForSEO (or similar) ran."""
+    kr = summary.get("keyword_research") or {}
+    research = kr.get("research") or {}
+    metrics = kr.get("metrics") or research.get("keywords") or []
+    lines = [
+        "## Keyword Research",
+        "",
+        f"- Status: **{kr.get('status', 'unavailable')}**",
+        f"- Real research: **{'yes' if kr.get('is_real_research') else 'no'}**",
+    ]
+    if kr.get("provider") or research.get("provider"):
+        lines.append(
+            f"- Provider: `{kr.get('provider') or research.get('provider')}`"
+        )
+    if kr.get("message"):
+        lines.append(f"- {kr['message']}")
+
+    if metrics and kr.get("is_real_research"):
+        lines.extend(
+            [
+                "",
+                "| Keyword | Volume | CPC | Competition | Difficulty |",
+                "| --- | ---: | ---: | --- | ---: |",
+            ]
+        )
+        for row in metrics[:40]:
+            lines.append(
+                "| {kw} | {vol} | {cpc} | {comp} | {diff} |".format(
+                    kw=row.get("keyword") or "",
+                    vol=row.get("search_volume")
+                    if row.get("search_volume") is not None
+                    else "—",
+                    cpc=row.get("cpc") if row.get("cpc") is not None else "—",
+                    comp=row.get("competition") or "—",
+                    diff=row.get("keyword_difficulty")
+                    if row.get("keyword_difficulty") is not None
+                    else "—",
+                )
+            )
+        related = kr.get("related") or research.get("related") or []
+        if related:
+            lines.extend(["", "### Related keywords", ""])
+            for row in related[:20]:
+                lines.append(
+                    f"- **{row.get('keyword')}** — volume "
+                    f"{row.get('search_volume') if row.get('search_volume') is not None else '—'}, "
+                    f"difficulty "
+                    f"{row.get('keyword_difficulty') if row.get('keyword_difficulty') is not None else '—'}"
+                )
+        lines.append("")
+        return "\n".join(lines) + "\n"
+
+    lines.extend(
+        [
+            "",
+            "Keyword **placement** on the live page is separate from research. "
+            "Without a keyword API, SEO-Agent will not invent volume or difficulty.",
+            "",
+            "Configure DataForSEO in `.env`:",
+            "",
+            "```bash",
+            "KEYWORD_API_PROVIDER=dataforseo",
+            "KEYWORD_API_LOGIN=...",
+            "KEYWORD_API_PASSWORD=...",
+            "```",
+            "",
+        ]
     )
+    return "\n".join(lines) + "\n"
 
 
 def _render_seo_metrics_section(metrics: dict) -> str:
@@ -40,9 +141,10 @@ def _render_seo_metrics_section(metrics: dict) -> str:
         f"- Word count (all pages): {totals.get('word_count', 0)}",
         f"- JS shell pages / JS-rendered pages: "
         f"{rendering.get('js_shell_pages', 0)} / {rendering.get('js_rendered_pages', 0)}",
+        f"- Rendering incomplete: {rendering.get('rendering_incomplete', False)}",
         "",
     ]
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
 
 
 def render_document_markdown(doc: ReportDocument) -> str:
@@ -52,18 +154,64 @@ def render_document_markdown(doc: ReportDocument) -> str:
         "",
         f"**URL:** {s.seed_url}",
         f"**Audit ID:** {s.audit_id}",
-        f"**Overall SEO Score:** {doc.overall_seo_score:.1f}/100",
         f"**Pages analyzed:** {s.pages_analyzed}",
     ]
+    if s.rendering_warning or (getattr(s, "score_note", None)):
+        lines.append(
+            f"**Overall SEO Score:** PROVISIONAL / WITHHELD "
+            f"(raw issue figure {doc.overall_seo_score:.1f}/100 is not a reliable grade)"
+        )
+    else:
+        lines.append(f"**Overall SEO Score:** {doc.overall_seo_score:.1f}/100")
     if s.created_at is not None:
         lines.append(f"**Created:** {s.created_at.isoformat()}")
+
+    lines.extend(["", "## Audit Scope", ""])
+    if s.scope_note:
+        lines.append(f"> {s.scope_note}")
+    else:
+        lines.append(
+            f"> This audit analyzed {s.pages_analyzed} page(s) starting from {s.seed_url}."
+        )
+    if doc.scope:
+        lines.append("")
+        lines.append(
+            f"- max_pages limit: {doc.scope.get('max_pages_limit', 'n/a')}"
+        )
+        lines.append(
+            f"- max_depth limit: {doc.scope.get('max_depth_limit', 'n/a')}"
+        )
+
+    if s.rendering_warning:
+        lines.extend(
+            [
+                "",
+                "## Rendering Warning",
+                "",
+                f"> **CRITICAL:** {s.rendering_warning}",
+                "",
+                "Content-based findings (H1, links, images, schema) from unrendered "
+                "JS shells were suppressed. Score is provisional until Playwright "
+                "captures the rendered DOM. Check `rendering.page_diagnostics` in JSON.",
+            ]
+        )
 
     lines.extend(
         [
             "",
             "## Summary",
             "",
-            f"- Overall SEO Score: **{doc.overall_seo_score:.1f}/100**",
+        ]
+    )
+    if s.rendering_warning:
+        lines.append(
+            f"- Overall SEO Score: **PROVISIONAL / WITHHELD** "
+            f"(raw {doc.overall_seo_score:.1f}/100 — incomplete data)"
+        )
+    else:
+        lines.append(f"- Overall SEO Score: **{doc.overall_seo_score:.1f}/100**")
+    lines.extend(
+        [
             f"- Pages analyzed: {s.pages_analyzed}",
             f"- Critical issues: {s.critical_count}",
             f"- Warnings: {s.warning_count}",
@@ -73,7 +221,8 @@ def render_document_markdown(doc: ReportDocument) -> str:
     if s.top_issue_codes:
         lines.append(f"- Top issue codes: {', '.join(s.top_issue_codes)}")
     for note in s.notes:
-        lines.append(f"- Note: {note}")
+        if note and note != s.scope_note and note != s.rendering_warning:
+            lines.append(f"- Note: {note}")
 
     lines.extend(["", "## Critical Issues", ""])
     lines.extend(_issue_bullets(doc.critical_issues) or ["- None"])
@@ -83,6 +232,53 @@ def render_document_markdown(doc: ReportDocument) -> str:
 
     lines.extend(["", "## Suggestions", ""])
     lines.extend(_issue_bullets(doc.suggestions) or ["- None"])
+
+    lines.extend(["", "## Recommendations", ""])
+    if not doc.recommendations:
+        lines.append("- None")
+    else:
+        for rec in doc.recommendations:
+            lines.append(f"### {rec.get('url')}")
+            lines.append("")
+            if rec.get("rendering_unreliable"):
+                lines.append(
+                    "- Rendering unreliable — fix Playwright capture before applying copy changes."
+                )
+                lines.append("")
+                continue
+            rewrites = rec.get("rewrites") or {}
+            title_rw = rewrites.get("title") or {}
+            meta_rw = rewrites.get("meta_description") or {}
+            h1_rw = rewrites.get("h1") or {}
+            # Only show a rewrite when it actually changes the copy.
+            if title_rw and title_rw.get("current") != title_rw.get("suggested"):
+                lines.append(
+                    f'- **Title rewrite:** `{title_rw.get("current")}` → '
+                    f'**"{title_rw.get("suggested")}"** '
+                    f'({title_rw.get("suggested_length")} chars)'
+                )
+            if meta_rw and meta_rw.get("current") != meta_rw.get("suggested"):
+                lines.append(
+                    f'- **Meta rewrite:** `{meta_rw.get("current")}` → '
+                    f'**"{meta_rw.get("suggested")}"** '
+                    f'({meta_rw.get("suggested_length")} chars)'
+                )
+            if h1_rw and h1_rw.get("current") != h1_rw.get("suggested"):
+                lines.append(
+                    f'- **H1 rewrite:** `{h1_rw.get("current")}` → '
+                    f'**"{h1_rw.get("suggested")}"**'
+                )
+            for action in rec.get("actions") or []:
+                if action.get("code") in {
+                    "title_rewrite",
+                    "meta_rewrite",
+                    "missing_title",
+                    "missing_meta_description",
+                    "missing_h1",
+                }:
+                    continue  # already shown as concrete rewrites above
+                lines.append(f"- {action.get('message')}")
+            lines.append("")
 
     if doc.diff is not None:
         lines.extend(
@@ -101,6 +297,17 @@ def render_document_markdown(doc: ReportDocument) -> str:
 
     if doc.optimization and doc.optimization.pages:
         lines.extend(["", "## AI Optimization Suggestions", ""])
+        kr = doc.optimization.keyword_research or {}
+        if kr:
+            lines.append(
+                f"- Keyword research status: **{kr.get('status', 'unavailable')}**"
+            )
+            if kr.get("message"):
+                lines.append(f"- {kr['message']}")
+            research = kr.get("research") or {}
+            if research.get("message"):
+                lines.append(f"- {research['message']}")
+            lines.append("")
         for page in doc.optimization.pages:
             lines.append(f"### {page.url}")
             lines.append("")
@@ -111,7 +318,12 @@ def render_document_markdown(doc: ReportDocument) -> str:
             if page.improved_h1:
                 lines.append(f"- **H1:** {page.improved_h1}")
             if page.keyword_suggestions:
-                lines.append(f"- **Keywords:** {', '.join(page.keyword_suggestions)}")
+                lines.append(f"- **Keywords (caller-provided only):** {', '.join(page.keyword_suggestions)}")
+            elif kr.get("status") != "caller_provided":
+                lines.append(
+                    "- **Keywords:** none — keyword research API not configured "
+                    "(brand/title guesses are not treated as research)."
+                )
             if page.heading_suggestions:
                 lines.append("- **Headings:**")
                 lines.extend([f"  - {h}" for h in page.heading_suggestions])
@@ -153,15 +365,30 @@ def render_document_markdown(doc: ReportDocument) -> str:
                         f"internal_links={page.get('internal_links', 0)}",
                         f"words={page.get('word_count', 0)}",
                         f"schema={','.join(page.get('schema_types') or []) or 'none'}",
+                        f"js_rendered={page.get('js_rendered', False)}",
                     ]
                 )
             )
         lines.append("")
 
-    # Prefer structured metrics from the audit summary when available via notes/overview.
-    # ReportDocument itself carries page_overview; analyzer totals are reflected above.
+    lines.extend(["## Overall SEO Score", ""])
+    if s.rendering_warning or getattr(s, "score_note", None):
+        lines.extend(
+            [
+                "**PROVISIONAL — score withheld.**",
+                "",
+                f"The raw issue-based figure is {doc.overall_seo_score:.1f}/100, but it is "
+                "not a reliable grade: content findings were suppressed because the page "
+                "was not fully rendered. Fix JS rendering, then re-run for a real score.",
+                "",
+            ]
+        )
+    else:
+        lines.extend([f"**{doc.overall_seo_score:.1f} / 100**", ""])
 
-    lines.extend(["## Overall SEO Score", "", f"**{doc.overall_seo_score:.1f} / 100**", ""])
+    mode_note = getattr(s, "scoring_mode_note", None)
+    if mode_note:
+        lines.extend([f"_Scoring basis: {mode_note}_", ""])
     return "\n".join(lines)
 
 

@@ -42,7 +42,14 @@ class FakeLLM:
         return self.content
 
 
-def test_optimize_page_with_injected_page():
+def test_optimize_page_with_injected_page(monkeypatch):
+    monkeypatch.setenv("KEYWORD_API_PROVIDER", "")
+    monkeypatch.setenv("KEYWORD_API_LOGIN", "")
+    monkeypatch.setenv("KEYWORD_API_PASSWORD", "")
+    from app.config import settings as settings_module
+
+    settings_module.get_settings.cache_clear()
+
     page = PageExtraction(
         url="https://example.com/sample",
         final_url="https://example.com/sample",
@@ -67,6 +74,38 @@ def test_optimize_page_with_injected_page():
     assert result.page.improved_title == "Sample SEO Page | Example"
     assert result.page.faq_suggestions[0].question.startswith("What is")
     assert result.page.internal_link_suggestions[0].target_url.endswith("/about")
+    assert result.keyword_research["status"] == "caller_provided_not_researched"
+    assert result.keyword_research["is_real_research"] is False
+    assert result.target_keywords == ["seo"]
+    settings_module.get_settings.cache_clear()
+
+
+def test_optimize_page_without_keywords_does_not_fake_research(monkeypatch):
+    monkeypatch.setenv("KEYWORD_API_PROVIDER", "")
+    monkeypatch.setenv("KEYWORD_API_LOGIN", "")
+    monkeypatch.setenv("KEYWORD_API_PASSWORD", "")
+    from app.config import settings as settings_module
+
+    settings_module.get_settings.cache_clear()
+
+    page = PageExtraction(
+        url="https://example.com/sample",
+        final_url="https://example.com/sample",
+        title="Actoro App",
+        h1=["Actoro"],
+    )
+    service = OptimizerService(
+        settings=Settings(llm=LLMSettings(model="test-model")),
+        llm_client=FakeLLM(json.dumps(SAMPLE_LLM_RESPONSE)),
+    )
+    result = service.optimize_page("https://example.com/sample", page=page)
+    assert result.status == "ok"
+    assert result.keyword_research["status"] == "not_provided"
+    assert result.keyword_research["is_real_research"] is False
+    assert result.page is not None
+    assert result.page.keyword_suggestions == []
+    assert any("keyword" in n.lower() or "api" in n.lower() for n in result.page.notes)
+    settings_module.get_settings.cache_clear()
 
 
 @responses.activate

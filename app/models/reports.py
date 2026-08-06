@@ -28,6 +28,10 @@ class ReportSummary(BaseModel):
     suggestion_count: int = 0
     top_issue_codes: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    scope_note: str = ""
+    rendering_warning: str | None = None
+    score_note: str | None = None
+    scoring_mode_note: str | None = None
 
 
 class ReportDocument(BaseModel):
@@ -37,10 +41,12 @@ class ReportDocument(BaseModel):
     critical_issues: list[Issue] = Field(default_factory=list)
     warnings: list[Issue] = Field(default_factory=list)
     suggestions: list[Issue] = Field(default_factory=list)
+    recommendations: list[dict[str, Any]] = Field(default_factory=list)
     overall_seo_score: float = 0.0
     optimization: OptimizationResult | None = None
     diff: AuditDiff | None = None
     page_overview: list[dict[str, Any]] = Field(default_factory=list)
+    scope: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReportArtifact(BaseModel):

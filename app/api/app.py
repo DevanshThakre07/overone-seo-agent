@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from app import __version__
-from app.api.routes import audit, history, optimize, report
+from app.api.routes import audit, auth_google, history, keywords, optimize, pagespeed, report
 from app.config.settings import get_settings
 from app.logging import setup_logging
 
@@ -17,7 +17,10 @@ def create_app() -> FastAPI:
         title="AI SEO Agent API",
         description=(
             "Standalone SEO engine HTTP API. "
-            "Hermes can call these endpoints as thin tool adapters."
+            "Hermes can call these endpoints as thin tool adapters. "
+            "Customers connect Google via /auth/google/start for Search Console data. "
+            "PageSpeed Insights adds Core Web Vitals when GOOGLE_PAGESPEED_API_KEY is set. "
+            "Keyword research (volume/CPC) uses DataForSEO when KEYWORD_API_* is set."
         ),
         version=__version__,
     )
@@ -30,6 +33,9 @@ def create_app() -> FastAPI:
     application.include_router(optimize.router)
     application.include_router(report.router)
     application.include_router(history.router)
+    application.include_router(auth_google.router)
+    application.include_router(pagespeed.router)
+    application.include_router(keywords.router)
     return application
 
 

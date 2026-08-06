@@ -15,6 +15,10 @@ class AuditRequest(BaseModel):
     target_keywords: list[str] = Field(default_factory=list)
     optimize_max_pages: int | None = None
     background: bool = False
+    # Customer's Connect Google account id (after they OAuth). Enables GSC data.
+    gsc_account_id: str | None = None
+    # None = auto-run PageSpeed when GOOGLE_PAGESPEED_API_KEY is set.
+    pagespeed: bool | None = None
 
 
 class OptimizeRequest(BaseModel):
