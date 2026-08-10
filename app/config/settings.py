@@ -60,8 +60,11 @@ class AnalyzerSettings(BaseModel):
 
 
 class StorageSettings(BaseModel):
-    backend: str = "sqlite"
+    backend: str = "sqlite"  # sqlite | postgres
     path: str = "data/audits.db"
+    # When set, audits + durable jobs use Postgres (SQLite remains local/dev default).
+    database_url: str | None = None
+    job_workers: int = 2
 
 
 class LLMSettings(BaseModel):
@@ -91,9 +94,17 @@ class GoogleSearchConsoleSettings(BaseModel):
     client_secret: str | None = None
     redirect_uri: str = "http://localhost:8000/auth/callback"
     token_db_path: str = "data/gsc_tokens.db"
+    # Owner-declared mirror of Google Cloud OAuth consent Publishing status.
+    # testing | production | unspecified — does not change Google; drives UX/status.
+    oauth_publishing_status: str = "testing"
+    # Public URLs pasted into the Google consent screen (Production).
+    privacy_policy_url: str | None = None
+    homepage_url: str | None = None
     scopes: list[str] = Field(
         default_factory=lambda: [
             "https://www.googleapis.com/auth/webmasters.readonly",
+            # GA4 Admin + Data API (Phase A). Existing connections must re-consent.
+            "https://www.googleapis.com/auth/analytics.readonly",
             "openid",
             "email",
         ]
@@ -105,11 +116,15 @@ class PageSpeedSettings(BaseModel):
 
     Uses a simple API key — no OAuth. Runs on the audit seed URL only by
     default (PSI is slow and rate-limited).
+
+    Strategy defaults to mobile because Google ranking/CWV are mobile-first;
+    `both` roughly doubles API time/quota. Desktop/both are for deep checks
+    via flag, not every audit.
     """
 
     enabled: bool = True
     api_key: str | None = None
-    # mobile | desktop | both
+    # mobile | desktop | both — see docstring; default mobile intentionally
     strategy: str = "mobile"
     timeout_seconds: float = 90.0
     # Lab score 0–100 below this → warning
@@ -145,7 +160,9 @@ class KeywordSettings(BaseModel):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Always load SEO-Agent/.env — Hermes runs with cwd=hermes-agent/, so a
+        # relative ".env" would miss KEYWORD_API_* / PageSpeed / GSC secrets.
+        env_file=str(PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -161,6 +178,9 @@ class Settings(BaseSettings):
 
     seo_storage_backend: str | None = Field(default=None, validation_alias="SEO_STORAGE_BACKEND")
     seo_storage_path: str | None = Field(default=None, validation_alias="SEO_STORAGE_PATH")
+    seo_database_url: str | None = Field(default=None, validation_alias="SEO_DATABASE_URL")
+    database_url: str | None = Field(default=None, validation_alias="DATABASE_URL")
+    seo_job_workers: int | None = Field(default=None, validation_alias="SEO_JOB_WORKERS")
 
     seo_playwright_enabled: bool | None = Field(
         default=None, validation_alias="SEO_PLAYWRIGHT_ENABLED"
@@ -170,6 +190,9 @@ class Settings(BaseSettings):
     llm_base_url: str | None = Field(default=None, validation_alias="LLM_BASE_URL")
     llm_model: str | None = Field(default=None, validation_alias="LLM_MODEL")
 
+    # When set, FastAPI requires Bearer / X-API-Key on protected routes.
+    seo_api_key: str | None = Field(default=None, validation_alias="SEO_API_KEY")
+
     gsc_client_secrets_file: str | None = Field(
         default=None, validation_alias="GSC_CLIENT_SECRETS_FILE"
     )
@@ -177,6 +200,15 @@ class Settings(BaseSettings):
     gsc_client_secret: str | None = Field(default=None, validation_alias="GSC_CLIENT_SECRET")
     gsc_redirect_uri: str | None = Field(default=None, validation_alias="GSC_REDIRECT_URI")
     gsc_token_db_path: str | None = Field(default=None, validation_alias="GSC_TOKEN_DB_PATH")
+    gsc_oauth_publishing_status: str | None = Field(
+        default=None, validation_alias="GSC_OAUTH_PUBLISHING_STATUS"
+    )
+    gsc_privacy_policy_url: str | None = Field(
+        default=None, validation_alias="GSC_PRIVACY_POLICY_URL"
+    )
+    gsc_homepage_url: str | None = Field(
+        default=None, validation_alias="GSC_HOMEPAGE_URL"
+    )
 
     google_pagespeed_api_key: str | None = Field(
         default=None, validation_alias="GOOGLE_PAGESPEED_API_KEY"
@@ -268,6 +300,13 @@ class Settings(BaseSettings):
             self.storage.backend = self.seo_storage_backend
         if self.seo_storage_path is not None:
             self.storage.path = self.seo_storage_path
+        # Prefer SEO_DATABASE_URL, then DATABASE_URL (Heroku-style).
+        db_url = (self.seo_database_url or self.database_url or "").strip()
+        if db_url:
+            self.storage.database_url = db_url
+            self.storage.backend = "postgres"
+        if self.seo_job_workers is not None:
+            self.storage.job_workers = max(1, min(int(self.seo_job_workers), 16))
 
         if self.seo_playwright_enabled is not None:
             self.playwright.enabled = self.seo_playwright_enabled
@@ -287,6 +326,12 @@ class Settings(BaseSettings):
             self.gsc.redirect_uri = self.gsc_redirect_uri
         if self.gsc_token_db_path is not None:
             self.gsc.token_db_path = self.gsc_token_db_path
+        if self.gsc_oauth_publishing_status is not None:
+            self.gsc.oauth_publishing_status = self.gsc_oauth_publishing_status.strip()
+        if self.gsc_privacy_policy_url is not None:
+            self.gsc.privacy_policy_url = self.gsc_privacy_policy_url.strip() or None
+        if self.gsc_homepage_url is not None:
+            self.gsc.homepage_url = self.gsc_homepage_url.strip() or None
 
         if self.google_pagespeed_api_key is not None:
             self.pagespeed.api_key = self.google_pagespeed_api_key

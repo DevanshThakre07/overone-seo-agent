@@ -16,6 +16,9 @@ FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
 def api_client(tmp_path, monkeypatch):
     db_path = tmp_path / "api-audits.db"
     monkeypatch.setenv("SEO_STORAGE_PATH", str(db_path))
+    # Keep existing route tests open unless they opt into auth.
+    monkeypatch.setenv("SEO_API_KEY", "")
+    monkeypatch.delenv("GOOGLE_PAGESPEED_API_KEY", raising=False)
     settings_module.get_settings.cache_clear()
     get_job_runner.cache_clear()
 
@@ -65,6 +68,15 @@ def test_health_and_audit_history_report(api_client):
     assert report.status_code == 200
     assert "SEO Audit Report" in report.text
 
+    pdf = api_client.get(f"/report/{body['audit_id']}", params={"format": "pdf"})
+    # 200 when fpdf2 installed; 501 with install hint otherwise
+    assert pdf.status_code in (200, 501), pdf.text
+    if pdf.status_code == 200:
+        assert pdf.headers["content-type"].startswith("application/pdf")
+        assert pdf.content.startswith(b"%PDF")
+    else:
+        assert "seo-agent[pdf]" in pdf.text or "fpdf2" in pdf.text
+
 
 @responses.activate
 def test_compare_endpoint(api_client):
@@ -97,3 +109,40 @@ def test_optimize_without_key_returns_error(api_client, monkeypatch):
     resp = api_client.post("/optimize", json={"url": "https://example.com/"})
     assert resp.status_code == 400
     assert "OPENAI_API_KEY" in resp.json()["detail"]
+
+
+def test_api_key_protects_routes_when_configured(tmp_path, monkeypatch):
+    monkeypatch.setenv("SEO_STORAGE_PATH", str(tmp_path / "a.db"))
+    monkeypatch.setenv("SEO_API_KEY", "test-secret-key")
+    settings_module.get_settings.cache_clear()
+    get_job_runner.cache_clear()
+
+    app = create_app()
+    with TestClient(app) as client:
+        health = client.get("/health")
+        assert health.status_code == 200
+        assert health.json()["api_auth_required"] is True
+
+        denied = client.get("/pagespeed/status")
+        assert denied.status_code == 401
+
+        ok_bearer = client.get(
+            "/pagespeed/status",
+            headers={"Authorization": "Bearer test-secret-key"},
+        )
+        assert ok_bearer.status_code == 200
+
+        ok_header = client.get(
+            "/keywords/status",
+            headers={"X-API-Key": "test-secret-key"},
+        )
+        assert ok_header.status_code == 200
+
+        bad = client.get(
+            "/keywords/status",
+            headers={"X-API-Key": "wrong"},
+        )
+        assert bad.status_code == 401
+
+    settings_module.get_settings.cache_clear()
+    get_job_runner.cache_clear()

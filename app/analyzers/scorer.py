@@ -29,10 +29,14 @@ from app.models.issues import AnalyzerResult, Issue, Severity
 # because they do not repeat per page in a meaningful way.
 SITE_LEVEL_CODES = frozenset(
     {
-        "sitemap_not_checked",
+        "sitemap_not_checked",  # legacy stub (no longer emitted)
         "sitemap_missing",
+        "sitemap_empty",
+        "sitemap_fetch_error",
+        "sitemap_coverage_gap",
         "robots_missing",
         "robots_disallow_all",
+        "robots_blocks_seed",
         "rendering_incomplete",
         "url_integrity_mismatch",
     }
@@ -40,10 +44,20 @@ SITE_LEVEL_CODES = frozenset(
 
 # Reported for visibility but never scored. Redirect chains are frequently
 # legitimate (locale, trailing slash, http->https) and 48 of them on a large
-# site is not a quality defect worth 144 points.
+# site is not a quality defect worth 144 points. Outbound link / schema
+# coverage findings are similarly noisy relative to on-page SEO quality.
 INFORMATIONAL_ONLY_CODES = frozenset(
     {
         "redirect_chain",
+        "broken_external_link",
+        "broken_external_link_summary",
+        "schema_coverage_low",
+        "schema_partial",
+        "schema_untyped",
+        "robots_nofollow",
+        "robots_no_sitemap_ref",
+        "robots_fetch_error",
+        "canonical_mismatch",
     }
 )
 

@@ -1,4 +1,6 @@
+import json
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import responses
 
@@ -14,13 +16,26 @@ def test_schemas_have_required_shape():
         schemas.CHECK_PAGESPEED,
         schemas.RESEARCH_KEYWORDS,
         schemas.OPTIMIZE_PAGE,
+        schemas.KEYWORD_PLAN,
         schemas.GENERATE_REPORT,
         schemas.COMPARE_AUDITS,
         schemas.LIST_SEO_HISTORY,
+        schemas.GSC_STATUS,
+        schemas.GSC_SITES,
+        schemas.GSC_PERFORMANCE,
     ):
         assert "name" in schema
         assert "parameters" in schema
         assert schema["parameters"]["type"] == "object"
+
+
+def test_auth_headers_on_crawl_schemas():
+    for schema in (schemas.AUDIT_SITE, schemas.OPTIMIZE_PAGE, schemas.KEYWORD_PLAN):
+        props = schema["parameters"]["properties"]
+        assert "auth_headers" in props
+        assert props["auth_headers"]["type"] == "object"
+        assert "auth_cookie" in props
+        assert "use_authenticated_crawl" in props
 
 
 def test_check_seo_available():
@@ -147,3 +162,169 @@ def test_handle_research_keywords(monkeypatch):
     assert '"is_real_research": true' in raw or '"is_real_research":true' in raw
     assert "2400" in raw
     settings_module.get_settings.cache_clear()
+
+
+def test_handle_audit_site_passes_auth_headers(monkeypatch):
+    captured: dict = {}
+
+    def fake_audit_site(url, **kwargs):
+        captured.update(kwargs)
+        captured["url"] = url
+        audit = MagicMock()
+        audit.audit_id = "a1"
+        audit.seed_url = url
+        audit.score = 80
+        audit.pages = []
+        audit.issues = []
+        audit.analyzer_results = []
+        audit.diff = None
+        audit.optimization = None
+        audit.summary = {
+            "seo_metrics": {},
+            "score_status": "final",
+            "severity": {},
+            "pagespeed": {"status": "skipped"},
+            "google_search_console": {"status": "skipped"},
+            "recommendations": [],
+            "pages": 0,
+            "issues": 0,
+            "analyzers_run": [],
+            "raw_score": 80,
+            "crawl_auth": {
+                "authenticated": True,
+                "cookie_present": False,
+                "extra_header_names": ["Authorization"],
+            },
+        }
+        return audit
+
+    monkeypatch.setattr("app.tools.audit_tool.audit_site", fake_audit_site)
+
+    secret = "Bearer super-secret-token"
+    raw = handlers.handle_audit_site(
+        {
+            "url": "https://example.com/",
+            "auth_headers": {"Authorization": secret},
+            "use_authenticated_crawl": True,
+            "pagespeed": False,
+            "save": False,
+        }
+    )
+    assert captured.get("auth_headers") == {"Authorization": secret}
+    assert captured.get("use_authenticated_crawl") is True
+    assert secret not in raw
+    payload = json.loads(raw)
+    assert payload["crawl_auth"]["extra_header_names"] == ["Authorization"]
+
+
+def test_handle_gsc_sites(monkeypatch):
+    monkeypatch.setattr(
+        "app.tools.gsc_tool.gsc_list_sites",
+        lambda account_id: {
+            "status": "ok",
+            "account_id": account_id,
+            "sites": [
+                {
+                    "site_url": "sc-domain:bookasto.com",
+                    "permission_level": "siteOwner",
+                }
+            ],
+            "count": 1,
+        },
+    )
+    raw = handlers.handle_gsc_sites({"account_id": "bookasto"})
+    payload = json.loads(raw)
+    assert payload["status"] == "ok"
+    assert payload["sites"][0]["site_url"] == "sc-domain:bookasto.com"
+    assert payload["delivery"] == "inline_json"
+
+
+def test_handle_gsc_performance(monkeypatch):
+    monkeypatch.setattr(
+        "app.tools.gsc_tool.gsc_performance",
+        lambda account_id, site_url, **kwargs: {
+            "status": "ok",
+            "account_id": account_id,
+            "site_url": site_url,
+            "top_queries": [{"query": "books", "clicks": 10}],
+            "opportunities": [
+                {"kind": "page2", "query": "rare books", "position": 12}
+            ],
+            "opportunity_count": 1,
+        },
+    )
+    raw = handlers.handle_gsc_performance(
+        {
+            "account_id": "bookasto",
+            "site_url": "sc-domain:bookasto.com",
+            "days": 28,
+        }
+    )
+    payload = json.loads(raw)
+    assert payload["status"] == "ok"
+    assert payload["opportunity_count"] == 1
+    assert payload["top_queries"][0]["query"] == "books"
+
+
+def test_handle_gsc_status(monkeypatch):
+    monkeypatch.setattr(
+        "app.tools.gsc_tool.gsc_status",
+        lambda account_id: {
+            "status": "ok",
+            "configured": True,
+            "connected": True,
+            "account_id": account_id,
+            "email": "owner@example.com",
+        },
+    )
+    raw = handlers.handle_gsc_status({"account_id": "bookasto"})
+    payload = json.loads(raw)
+    assert payload["connected"] is True
+    assert "owner@example.com" in raw
+
+
+def test_handle_check_serp(monkeypatch):
+    monkeypatch.setattr(
+        "app.tools.serp_tool.check_serp",
+        lambda keyword, **kwargs: {
+            "status": "ok",
+            "keyword": keyword,
+            "organic": [{"rank_group": 1, "domain": "a.com", "title": "A"}],
+            "organic_count": 1,
+        },
+    )
+    raw = handlers.handle_check_serp({"keyword": "rare books"})
+    payload = json.loads(raw)
+    assert payload["status"] == "ok"
+    assert payload["organic_count"] == 1
+
+
+def test_handle_check_rank(monkeypatch):
+    monkeypatch.setattr(
+        "app.tools.serp_tool.check_rank",
+        lambda keyword, target, **kwargs: {
+            "status": "ok",
+            "keyword": keyword,
+            "rank": {"found": True, "position": 3, "target": target},
+        },
+    )
+    raw = handlers.handle_check_rank(
+        {"keyword": "rare books", "target": "bookasto.com"}
+    )
+    payload = json.loads(raw)
+    assert payload["rank"]["position"] == 3
+
+
+def test_handle_check_backlinks(monkeypatch):
+    monkeypatch.setattr(
+        "app.tools.backlinks_tool.check_backlinks",
+        lambda target, **kwargs: {
+            "status": "ok",
+            "target": target,
+            "summary": {"backlinks": 10, "referring_domains": 4},
+            "top_referring_domains": [{"domain": "news.example"}],
+        },
+    )
+    raw = handlers.handle_check_backlinks({"target": "bookasto.com"})
+    payload = json.loads(raw)
+    assert payload["summary"]["backlinks"] == 10

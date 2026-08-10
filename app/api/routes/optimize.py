@@ -18,6 +18,9 @@ def optimize(payload: OptimizeRequest) -> OptimizationResult:
         result = optimize_page(
             str(payload.url),
             target_keywords=payload.target_keywords or None,
+            auth_cookie=payload.auth_cookie,
+            auth_headers=payload.auth_headers or None,
+            use_authenticated_crawl=payload.use_authenticated_crawl,
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=str(exc)) from exc

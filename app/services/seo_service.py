@@ -5,7 +5,10 @@ from copy import deepcopy
 
 from app.analyzers.base import AnalysisContext
 from app.analyzers.metrics import build_structured_seo_metrics
-from app.analyzers.recommendations import build_prescriptive_recommendations
+from app.analyzers.recommendations import (
+    build_prescriptive_recommendations,
+    merge_gsc_into_recommendations,
+)
 from app.analyzers.registry import AnalyzerRegistry, build_default_registry
 from app.analyzers.rendering_guardrails import apply_rendering_guardrails
 from app.analyzers.scorer import (
@@ -14,6 +17,7 @@ from app.analyzers.scorer import (
     severity_counts,
 )
 from app.config.settings import Settings, get_settings
+from app.crawler.auth import auth_policy_block, build_crawl_auth
 from app.extractor.html_extractor import HtmlExtractor
 from app.logging import get_logger, log_event
 from app.models.audit import AuditOptions, SiteAudit
@@ -59,8 +63,34 @@ class SeoService:
         if options.compare and self.memory_service is not None:
             previous = self.memory_service.latest(url)
 
+        # Auth: in-memory only. Probe login wall WITHOUT credentials first.
+        crawl_auth = build_crawl_auth(
+            auth_cookie=options.auth_cookie,
+            auth_headers=options.auth_headers or None,
+        )
+        use_auth = bool(options.use_authenticated_crawl) and bool(crawl_auth)
+        login_wall = self.crawler_service.probe_login_wall(url)
+        auth_meta = auth_policy_block(
+            auth=crawl_auth,
+            use_authenticated_crawl=bool(options.use_authenticated_crawl),
+            login_wall=login_wall,
+            credentials_used=use_auth,
+        )
+        if options.use_authenticated_crawl and not crawl_auth:
+            log_event(logger, "auth_opt_in_without_credentials", url=url)
+        if crawl_auth and not options.use_authenticated_crawl:
+            log_event(
+                logger,
+                "auth_credentials_ignored_until_opt_in",
+                url=url,
+                credentials_supplied=True,
+            )
+
         try:
-            crawl_results, stats = self.crawler_service.crawl(url)
+            crawl_results, stats = self.crawler_service.crawl(
+                url,
+                auth=crawl_auth if use_auth else None,
+            )
             pages = self.extractor.extract_many(crawl_results, stats.seed_url)
 
             context = AnalysisContext(
@@ -78,6 +108,28 @@ class SeoService:
             issues, analyzer_results, rendering_meta = apply_rendering_guardrails(
                 pages, issues, analyzer_results
             )
+
+            if login_wall.get("requires_login") and not use_auth:
+                issues.insert(
+                    0,
+                    Issue(
+                        code="login_wall_detected",
+                        severity=Severity.INFO,
+                        message=(
+                            "Login wall detected on a public fetch. Authenticated pages "
+                            "were not crawled. Opt in with use_authenticated_crawl=true "
+                            "and auth_cookie/auth_headers (GET-only, in-memory credentials)."
+                        ),
+                        url=normalize_url(url),
+                        details={
+                            "signals": login_wall.get("signals"),
+                            "credentials_supplied": bool(crawl_auth),
+                            "use_authenticated_crawl": bool(
+                                options.use_authenticated_crawl
+                            ),
+                        },
+                    ),
+                )
 
             # Defense-in-depth: never return data for a page other than the one
             # that was asked for (guards against cross-run/cached mixups).
@@ -227,6 +279,89 @@ class SeoService:
                         "message": str(exc),
                     }
 
+            recommendations = merge_gsc_into_recommendations(recommendations, gsc_block)
+
+            ga4_block: dict = {
+                "status": "skipped",
+                "message": (
+                    "GA4 not requested. Pass include_ga4=true with "
+                    "gsc_account_id + ga4_property_id (from /ga4/properties)."
+                ),
+            }
+            if options.include_ga4:
+                try:
+                    from app.integrations.google.ga4_service import Ga4Service
+
+                    ga4_block = Ga4Service(settings).audit_enrichment(
+                        options.gsc_account_id,
+                        options.ga4_property_id,
+                    )
+                except Exception as exc:  # noqa: BLE001 — never fail the audit on GA4
+                    log_event(
+                        logger,
+                        "ga4_enrichment_exception",
+                        account_id=options.gsc_account_id,
+                        property_id=options.ga4_property_id,
+                        error=str(exc),
+                    )
+                    ga4_block = {
+                        "status": "error",
+                        "account_id": options.gsc_account_id,
+                        "property_id": options.ga4_property_id,
+                        "message": str(exc),
+                    }
+
+            # Phase 2 competitive — opt-in only (paid). Never auto.
+            serp_block: dict = {
+                "status": "skipped",
+                "message": (
+                    "Competitive SERP/rank not requested. Pass include_serp=true "
+                    "with target_keywords, or call /serp and /rank directly."
+                ),
+            }
+            backlinks_block: dict = {
+                "status": "skipped",
+                "message": (
+                    "Backlinks not requested. Pass include_backlinks=true, "
+                    "or call /backlinks directly."
+                ),
+            }
+            if options.include_serp or options.include_backlinks:
+                from app.integrations.dataforseo.competitive import CompetitiveSeoService
+
+                competitive = CompetitiveSeoService(settings)
+                if options.include_serp:
+                    try:
+                        serp_block = competitive.audit_serp_enrichment(
+                            stats.seed_url,
+                            options.target_keywords or [],
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        log_event(
+                            logger,
+                            "serp_enrichment_exception",
+                            error=str(exc),
+                        )
+                        serp_block = {
+                            "status": "error",
+                            "message": str(exc),
+                        }
+                if options.include_backlinks:
+                    try:
+                        backlinks_block = competitive.audit_backlinks_enrichment(
+                            stats.seed_url
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        log_event(
+                            logger,
+                            "backlinks_enrichment_exception",
+                            error=str(exc),
+                        )
+                        backlinks_block = {
+                            "status": "error",
+                            "message": str(exc),
+                        }
+
             audit = SiteAudit(
                 seed_url=normalize_url(stats.seed_url),
                 score=score,
@@ -254,7 +389,12 @@ class SeoService:
                     # Always present so reports can never imply keywords were researched.
                     "keyword_research": normalize_caller_keywords(options.target_keywords),
                     "google_search_console": gsc_block,
+                    "google_analytics": ga4_block,
                     "pagespeed": pagespeed_block,
+                    "serp": serp_block,
+                    "backlinks": backlinks_block,
+                    # Never includes cookie/header values — redacted policy only.
+                    "crawl_auth": auth_meta,
                 },
             )
 
@@ -277,6 +417,25 @@ class SeoService:
                     "new_issues": len(audit.diff.new_issues),
                     "resolved_issues": len(audit.diff.resolved_issues),
                 }
+
+            # Rank history — independent of full-audit save; only when SERP ran ok.
+            if serp_block.get("status") == "ok":
+                try:
+                    from app.repositories.factory import get_rank_history_repository
+                    from app.services.rank_history_service import RankHistoryService
+
+                    RankHistoryService(get_rank_history_repository(settings)).record_serp_block(
+                        serp_block,
+                        seed_url=audit.seed_url,
+                        audit_id=audit.audit_id,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    log_event(
+                        logger,
+                        "rank_history_record_failed",
+                        error=str(exc),
+                        audit_id=audit.audit_id,
+                    )
 
             if should_persist and self.memory_service is not None:
                 self.memory_service.save(audit)

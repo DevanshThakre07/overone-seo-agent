@@ -207,6 +207,116 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
     return out
 
 
+def merge_gsc_into_recommendations(
+    recommendations: list[dict[str, Any]],
+    gsc_block: dict[str, Any] | None,
+    *,
+    max_actions_per_page: int = 5,
+) -> list[dict[str, Any]]:
+    """Attach Search Console opportunities as actions on matching page recs.
+
+    When GSC status is not ``ok`` or there are no opportunities, returns
+    recommendations unchanged. Pages that appear only in GSC (not crawled)
+    get a lightweight recommendation stub so opportunities are not dropped.
+    """
+    if not gsc_block or gsc_block.get("status") != "ok":
+        return recommendations
+
+    snapshot = gsc_block.get("snapshot") or {}
+    opportunities = list(snapshot.get("opportunities") or [])
+    if not opportunities:
+        return recommendations
+
+    by_url: dict[str, dict[str, Any]] = {
+        _norm_page_url(str(rec.get("url") or "")): rec for rec in recommendations if rec.get("url")
+    }
+    # Preserve insertion order of existing recs; append stubs at end.
+    out = list(recommendations)
+    actions_added_for: dict[str, int] = {}
+
+    for opp in opportunities:
+        page_url = str(opp.get("page") or "")
+        if not page_url:
+            continue
+        key = _norm_page_url(page_url)
+        rec = by_url.get(key)
+        if rec is None:
+            rec = {
+                "url": page_url,
+                "rendering_unreliable": False,
+                "current": {"title": None, "meta_description": None, "h1": None},
+                "suggested_title": None,
+                "suggested_meta_description": None,
+                "suggested_h1": None,
+                "rewrites": {},
+                "actions": [],
+                "source": "google_search_console",
+            }
+            by_url[key] = rec
+            out.append(rec)
+
+        count = actions_added_for.get(key, 0)
+        if count >= max_actions_per_page:
+            continue
+
+        action = _gsc_opportunity_action(opp)
+        if action is None:
+            continue
+        rec.setdefault("actions", []).append(action)
+        actions_added_for[key] = count + 1
+
+    return out
+
+
+def _gsc_opportunity_action(opp: dict[str, Any]) -> dict[str, Any] | None:
+    query = (opp.get("query") or "").strip()
+    if not query:
+        return None
+    kind = opp.get("kind") or "page2"
+    impressions = int(opp.get("impressions") or 0)
+    position = float(opp.get("position") or 0)
+    ctr = float(opp.get("ctr") or 0)
+    why = opp.get("why") or ""
+
+    if kind == "low_ctr":
+        code = "gsc_low_ctr"
+        message = (
+            f'GSC low CTR: query "{query}" at position {position:.1f} '
+            f"({impressions} impressions, CTR {ctr:.1%}). {why} "
+            f'Target this query in the title/meta for {opp.get("page")}.'
+        )
+    else:
+        code = "gsc_page2_opportunity"
+        message = (
+            f'GSC page-2 opportunity: query "{query}" at position {position:.1f} '
+            f"({impressions} impressions, CTR {ctr:.1%}). {why}"
+        )
+
+    return {
+        "code": code,
+        "message": message,
+        "query": query,
+        "page": opp.get("page"),
+        "impressions": impressions,
+        "clicks": int(opp.get("clicks") or 0),
+        "ctr": ctr,
+        "position": position,
+        "kind": kind,
+        "source": "google_search_console",
+        "suggested_value": None,
+    }
+
+
+def _norm_page_url(url: str) -> str:
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit((url or "").strip())
+    if not parts.scheme and not parts.netloc:
+        return url.rstrip("/") or url
+    path = parts.path.rstrip("/") or "/"
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, "", ""))
+
+
 def _key(text: str) -> str:
     """Comparison key: case/punctuation/whitespace-insensitive."""
     return re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).strip()

@@ -53,7 +53,7 @@ It never writes into `AI-AGENT-Projects/hermes-agent/`.
 
 | Tool | Purpose |
 |---|---|
-| `audit_site` | Crawl + SEO audit (optional save/compare/optimize/PageSpeed) |
+| `audit_site` | Crawl + SEO audit (optional save/compare/optimize/PageSpeed/GSC) |
 | `check_pagespeed` | PageSpeed Insights / Core Web Vitals for a URL |
 | `research_keywords` | DataForSEO search volume / CPC / competition |
 | `optimize_page` | AI page suggestions |
@@ -62,6 +62,17 @@ It never writes into `AI-AGENT-Projects/hermes-agent/`.
 | `compare_audits` | Diff vs previous audit |
 | `confirm_site_sources` | Lift write firewall for user-named local source files |
 | `list_seo_history` | List saved audits |
+| `list_seo_trends` | Score / severity trends over saved audits |
+| `gsc_status` | Whether a GSC `account_id` is connected |
+| `gsc_sites` | List verified Search Console properties |
+| `gsc_performance` | Queries / pages / opportunities for a property |
+| `check_serp` | Live Google organic top results (paid DataForSEO) |
+| `check_rank` | Domain position for a keyword (paid) |
+| `check_backlinks` | Backlink summary + top referring domains (paid) |
+
+Authenticated crawl: `audit_site`, `optimize_page`, and `keyword_plan` accept `auth_cookie`, `auth_headers`, and `use_authenticated_crawl` (GET/HEAD only, memory-only). Connect Google via browser/`seo-api` OAuth — Hermes does not start the consent flow.
+
+Competitive SEO is **opt-in only** (never auto on audit): use the tools above, or pass `include_serp` / `include_backlinks` on `audit_site` when the user explicitly asks.
 
 ## Requirements
 

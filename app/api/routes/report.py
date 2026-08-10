@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 
 from app.api.dependencies import get_report_service
 from app.api.schemas import ReportRequest
@@ -12,6 +12,18 @@ from app.tools.report_tool import generate_report
 
 router = APIRouter(tags=["report"])
 logger = get_logger(__name__)
+
+
+def _pdf_filename(audit_id: str, seed_url: str | None = None) -> str:
+    host = "report"
+    if seed_url:
+        try:
+            from urllib.parse import urlparse
+
+            host = (urlparse(seed_url).hostname or "report").replace(".", "-")
+        except Exception:  # noqa: BLE001
+            host = "report"
+    return f"seo-report-{host}-{audit_id[:8]}.pdf"
 
 
 @router.post("/report")
@@ -41,10 +53,21 @@ def create_report(payload: ReportRequest) -> dict:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    if artifact.format == ReportFormat.PDF:
+        return {
+            "audit_id": artifact.audit_id,
+            "format": "pdf",
+            "content_base64": artifact.content,
+            "media_type": "application/pdf",
+            "path": artifact.path,
+            "metadata": artifact.metadata,
+        }
+
     return {
         "audit_id": artifact.audit_id,
         "format": artifact.format.value,
         "content": artifact.content,
+        "path": artifact.path,
         "metadata": artifact.metadata,
     }
 
@@ -68,6 +91,18 @@ def get_report(
 
     if fmt == ReportFormat.MARKDOWN:
         return PlainTextResponse(artifact.content, media_type="text/markdown")
+    if fmt == ReportFormat.PDF:
+        raw = report_service.pdf_bytes(artifact)
+        filename = _pdf_filename(
+            artifact.audit_id, artifact.metadata.get("seed_url")
+        )
+        return Response(
+            content=raw,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
+        )
     return {
         "audit_id": artifact.audit_id,
         "format": artifact.format.value,

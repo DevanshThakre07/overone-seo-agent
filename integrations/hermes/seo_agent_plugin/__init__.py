@@ -10,6 +10,12 @@ from . import handlers, schemas
 
 _TOOLS = (
     ("audit_site", schemas.AUDIT_SITE, handlers.handle_audit_site, "🔍"),
+    (
+        "check_login_wall",
+        schemas.CHECK_LOGIN_WALL,
+        handlers.handle_check_login_wall,
+        "🔐",
+    ),
     ("check_pagespeed", schemas.CHECK_PAGESPEED, handlers.handle_check_pagespeed, "⚡"),
     (
         "research_keywords",
@@ -28,6 +34,43 @@ _TOOLS = (
         "🔒",
     ),
     ("list_seo_history", schemas.LIST_SEO_HISTORY, handlers.handle_list_seo_history, "🗂️"),
+    ("list_seo_trends", schemas.LIST_SEO_TRENDS, handlers.handle_list_seo_trends, "📈"),
+    (
+        "list_rank_history",
+        schemas.LIST_RANK_HISTORY,
+        handlers.handle_list_rank_history,
+        "📍",
+    ),
+    ("gsc_status", schemas.GSC_STATUS, handlers.handle_gsc_status, "🔗"),
+    ("gsc_sites", schemas.GSC_SITES, handlers.handle_gsc_sites, "🗂️"),
+    (
+        "gsc_performance",
+        schemas.GSC_PERFORMANCE,
+        handlers.handle_gsc_performance,
+        "📉",
+    ),
+    ("ga4_status", schemas.GA4_STATUS, handlers.handle_ga4_status, "📊"),
+    (
+        "ga4_properties",
+        schemas.GA4_PROPERTIES,
+        handlers.handle_ga4_properties,
+        "🗂️",
+    ),
+    (
+        "ga4_set_preference",
+        schemas.GA4_SET_PREFERENCE,
+        handlers.handle_ga4_set_preference,
+        "⭐",
+    ),
+    ("ga4_report", schemas.GA4_REPORT, handlers.handle_ga4_report, "📈"),
+    ("check_serp", schemas.CHECK_SERP, handlers.handle_check_serp, "🔎"),
+    ("check_rank", schemas.CHECK_RANK, handlers.handle_check_rank, "📍"),
+    (
+        "check_backlinks",
+        schemas.CHECK_BACKLINKS,
+        handlers.handle_check_backlinks,
+        "🔗",
+    ),
 )
 
 

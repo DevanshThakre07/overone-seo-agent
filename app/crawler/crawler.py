@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 
 from app.config.settings import CrawlSettings, PlaywrightSettings
+from app.crawler.auth import CrawlAuth
 from app.crawler.client import HttpClient
 from app.crawler.playwright_client import PlaywrightClient
 from app.crawler.robots import RobotsChecker
@@ -27,19 +28,35 @@ class WebsiteCrawler:
         crawl_settings: CrawlSettings,
         playwright_settings: PlaywrightSettings | None = None,
         client: HttpClient | None = None,
+        auth: CrawlAuth | None = None,
     ) -> None:
         self.settings = crawl_settings
+        self.auth = auth if auth and auth.configured else None
+        # Read-only: HttpClient only exposes GET/HEAD. Auth is in-memory on the session.
         self.client = client or HttpClient(
             user_agent=crawl_settings.user_agent,
             timeout=crawl_settings.timeout_seconds,
             max_redirects=crawl_settings.max_redirects,
+            auth=self.auth,
         )
         self.robots = RobotsChecker(self.client, crawl_settings.user_agent)
-        self.playwright = PlaywrightClient(playwright_settings or PlaywrightSettings())
+        pw_headers = self.auth.http_headers() if self.auth else None
+        self.playwright = PlaywrightClient(
+            playwright_settings or PlaywrightSettings(),
+            extra_headers=pw_headers,
+        )
 
     def crawl(self, seed_url: str) -> tuple[list[CrawlResult], CrawlStats]:
         seed = normalize_url(seed_url)
-        log_event(logger, "crawl_started", url=seed)
+        log_event(
+            logger,
+            "crawl_started",
+            url=seed,
+            authenticated=bool(self.auth),
+            read_only=True,
+            # Never log cookie/header values — boolean only.
+            credentials_supplied=bool(self.auth),
+        )
 
         stats = CrawlStats(seed_url=seed)
         results: list[CrawlResult] = []

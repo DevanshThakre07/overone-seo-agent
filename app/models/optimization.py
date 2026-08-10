@@ -47,3 +47,5 @@ class OptimizationResult(BaseModel):
     # Explicit scope contract: these suggestions are for an external site and
     # must not be written into any local file (see app/utils/scope_guard.py).
     write_policy: dict[str, Any] = Field(default_factory=dict)
+    # Redacted auth policy only — never cookie/header values.
+    crawl_auth: dict[str, Any] = Field(default_factory=dict)

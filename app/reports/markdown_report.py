@@ -16,6 +16,11 @@ def render_markdown(audit: SiteAudit) -> str:
     if metrics:
         sections += _render_seo_metrics_section(metrics)
     sections += _render_data_integrity_section(summary)
+    sections += _render_pagespeed_section(summary)
+    sections += _render_gsc_section(summary)
+    sections += _render_ga4_section(summary)
+    sections += _render_serp_section(summary)
+    sections += _render_backlinks_section(summary)
     sections += _render_keyword_research_section(summary)
 
     if sections:
@@ -44,6 +49,188 @@ def _render_data_integrity_section(summary: dict) -> str:
         )
     elif integrity.get("warning"):
         lines.append(f"- **{integrity['warning']}**")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _render_pagespeed_section(summary: dict) -> str:
+    psi = summary.get("pagespeed") or {}
+    if not psi or psi.get("status") in (None, "skipped"):
+        return ""
+    lines = ["## PageSpeed / Core Web Vitals", "", f"- Status: **{psi.get('status')}**"]
+    if psi.get("message") and psi.get("status") != "ok":
+        lines.append(f"- {psi['message']}")
+    for strat in psi.get("strategies") or []:
+        lab = strat.get("lab") or {}
+        name = strat.get("strategy") or "mobile"
+        lines.append(
+            f"- **{name}:** performance {lab.get('performance_score')}/100, "
+            f"LCP {lab.get('lcp_ms')}ms, CLS {lab.get('cls')}, "
+            f"INP {lab.get('inp_ms')}ms"
+        )
+    # Single-strategy shape from some paths
+    lab = psi.get("lab") or {}
+    if lab and not psi.get("strategies"):
+        lines.append(
+            f"- Performance {lab.get('performance_score')}/100, "
+            f"LCP {lab.get('lcp_ms')}ms, CLS {lab.get('cls')}"
+        )
+    issue_rows = psi.get("issues") or []
+    if issue_rows:
+        lines.extend(["", "### PageSpeed issues (in audit score)", ""])
+        for row in issue_rows[:10]:
+            if isinstance(row, dict):
+                lines.append(
+                    f"- **{row.get('severity', 'warning')}** `{row.get('code')}`: "
+                    f"{row.get('message')}"
+                )
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _render_gsc_section(summary: dict) -> str:
+    gsc = summary.get("google_search_console") or {}
+    if not gsc or gsc.get("status") in (None, "skipped"):
+        return ""
+    lines = [
+        "## Google Search Console",
+        "",
+        f"- Status: **{gsc.get('status')}**",
+    ]
+    if gsc.get("message"):
+        lines.append(f"- {gsc['message']}")
+    if gsc.get("matched_site_url"):
+        lines.append(f"- Property: `{gsc.get('matched_site_url')}`")
+    snap = gsc.get("snapshot") or {}
+    if snap.get("period"):
+        period = snap["period"]
+        lines.append(
+            f"- Period: {period.get('start')} → {period.get('end')} "
+            f"({period.get('days')} days)"
+        )
+    top_q = snap.get("top_queries") or []
+    if top_q:
+        lines.extend(["", "### Top queries", ""])
+        for row in top_q[:10]:
+            lines.append(
+                f"- `{row.get('query')}` — clicks {row.get('clicks')}, "
+                f"impr {row.get('impressions')}, CTR {row.get('ctr')}, "
+                f"pos {row.get('position')}"
+            )
+    top_p = snap.get("top_pages") or []
+    if top_p:
+        lines.extend(["", "### Top pages", ""])
+        for row in top_p[:10]:
+            lines.append(
+                f"- `{row.get('page')}` — clicks {row.get('clicks')}, "
+                f"impr {row.get('impressions')}, pos {row.get('position')}"
+            )
+    opps = snap.get("opportunities") or []
+    if opps:
+        lines.extend(["", "### Opportunities (merged into recommendations)", ""])
+        for row in opps[:10]:
+            lines.append(
+                f"- **{row.get('kind', 'page2')}** `{row.get('query')}` on "
+                f"`{row.get('page')}` — pos {row.get('position')}, "
+                f"impr {row.get('impressions')}"
+            )
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _render_ga4_section(summary: dict) -> str:
+    ga4 = summary.get("google_analytics") or {}
+    if not ga4 or ga4.get("status") in (None, "skipped"):
+        return ""
+    lines = [
+        "## Google Analytics (GA4)",
+        "",
+        f"- Status: **{ga4.get('status')}**",
+    ]
+    if ga4.get("message"):
+        lines.append(f"- {ga4['message']}")
+    if ga4.get("property_id"):
+        lines.append(f"- Property: `{ga4.get('property_id')}`")
+    snap = ga4.get("snapshot") or {}
+    totals = snap.get("totals") or {}
+    if snap.get("start_date"):
+        lines.append(
+            f"- Period: {snap.get('start_date')} → {snap.get('end_date')} "
+            f"({snap.get('days')} days)"
+        )
+    if totals:
+        lines.append(
+            f"- Sessions: **{totals.get('sessions', 0)}** · "
+            f"Users: **{totals.get('total_users', 0)}** · "
+            f"Views: **{totals.get('screen_page_views', 0)}**"
+        )
+    top_p = snap.get("top_pages") or []
+    if top_p:
+        lines.extend(["", "### Top pages", ""])
+        for row in top_p[:10]:
+            lines.append(
+                f"- `{row.get('page_path')}` — views {row.get('screen_page_views')}, "
+                f"sessions {row.get('sessions')}, users {row.get('total_users')}"
+            )
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _render_serp_section(summary: dict) -> str:
+    serp = summary.get("serp") or {}
+    if not serp or serp.get("status") in (None, "skipped"):
+        return ""
+    lines = ["## SERP / Rankings", "", f"- Status: **{serp.get('status')}**"]
+    if serp.get("message"):
+        lines.append(f"- {serp['message']}")
+    if serp.get("target_domain"):
+        lines.append(f"- Target domain: `{serp.get('target_domain')}`")
+    for check in serp.get("checks") or []:
+        kw = check.get("keyword")
+        rank = check.get("rank") or {}
+        if rank.get("found"):
+            lines.append(
+                f"- `{kw}` → position **{rank.get('position')}** "
+                f"({rank.get('url')})"
+            )
+        else:
+            lines.append(f"- `{kw}` → not in top results")
+        for row in (check.get("top_organic") or [])[:3]:
+            lines.append(
+                f"  - #{row.get('rank_group')} `{row.get('domain')}` — "
+                f"{row.get('title')}"
+            )
+    # Standalone SERP shape (single lookup stored on summary)
+    if serp.get("organic") and not serp.get("checks"):
+        for row in (serp.get("organic") or [])[:10]:
+            lines.append(
+                f"- #{row.get('rank_group')} `{row.get('domain')}` — "
+                f"{row.get('title')}"
+            )
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _render_backlinks_section(summary: dict) -> str:
+    bl = summary.get("backlinks") or {}
+    if not bl or bl.get("status") in (None, "skipped"):
+        return ""
+    lines = ["## Backlinks", "", f"- Status: **{bl.get('status')}**"]
+    if bl.get("message"):
+        lines.append(f"- {bl['message']}")
+    snap = bl.get("summary") or {}
+    if snap:
+        lines.append(f"- Backlinks: **{snap.get('backlinks')}**")
+        lines.append(f"- Referring domains: **{snap.get('referring_domains')}**")
+        lines.append(f"- Rank: {snap.get('rank')}")
+    refs = bl.get("top_referring_domains") or []
+    if refs:
+        lines.extend(["", "### Top referring domains", ""])
+        for row in refs[:10]:
+            lines.append(
+                f"- `{row.get('domain')}` — backlinks {row.get('backlinks')}, "
+                f"rank {row.get('rank')}"
+            )
     lines.append("")
     return "\n".join(lines) + "\n"
 

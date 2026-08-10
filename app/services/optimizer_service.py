@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.config.settings import Settings, get_settings
+from app.crawler.auth import auth_policy_block, build_crawl_auth
 from app.extractor.html_extractor import HtmlExtractor
 from app.logging import get_logger, log_event
 from app.models.audit import SiteAudit
@@ -44,10 +45,28 @@ class OptimizerService:
         target_keywords: list[str] | None = None,
         page: PageExtraction | None = None,
         related_internal_urls: list[str] | None = None,
+        auth_cookie: str | None = None,
+        auth_headers: dict[str, str] | None = None,
+        use_authenticated_crawl: bool = False,
     ) -> OptimizationResult:
         log_event(logger, "optimize_started", url=url)
+        crawl_auth = build_crawl_auth(
+            auth_cookie=auth_cookie,
+            auth_headers=auth_headers,
+        )
+        use_auth = bool(use_authenticated_crawl) and bool(crawl_auth)
+        login_wall = self.crawler_service.probe_login_wall(url)
+        auth_meta = auth_policy_block(
+            auth=crawl_auth,
+            use_authenticated_crawl=use_authenticated_crawl,
+            login_wall=login_wall,
+            credentials_used=use_auth,
+        )
         try:
-            page_data = page or self._fetch_page(url)
+            page_data = page or self._fetch_page(
+                url,
+                auth=crawl_auth if use_auth else None,
+            )
             if page_data.is_broken:
                 reason = humanize_fetch_error(page_data.error)
                 disclaimer = (
@@ -65,6 +84,7 @@ class OptimizerService:
                     analysis_is_site_specific=False,
                     disclaimer=disclaimer,
                     write_policy=build_write_policy(url),
+                    crawl_auth=auth_meta,
                 )
 
             related = related_internal_urls or page_data.internal_links
@@ -119,6 +139,7 @@ class OptimizerService:
                 },
                 analysis_is_site_specific=True,
                 write_policy=build_write_policy(url),
+                crawl_auth=auth_meta,
             )
             log_event(logger, "optimize_completed", url=page_data.final_url)
             return result
@@ -181,7 +202,7 @@ class OptimizerService:
             pages=pages_out,
         )
 
-    def _fetch_page(self, url: str) -> PageExtraction:
+    def _fetch_page(self, url: str, *, auth=None) -> PageExtraction:
         # Limit crawl to the single page for optimize_page
         crawl = self.settings.crawl
         original = (
@@ -194,7 +215,7 @@ class OptimizerService:
         crawl.check_external_links = False
         self.crawler_service.settings = self.settings
         try:
-            results, stats = self.crawler_service.crawl(url)
+            results, stats = self.crawler_service.crawl(url, auth=auth)
         finally:
             crawl.max_pages, crawl.max_depth, crawl.check_external_links = original
 

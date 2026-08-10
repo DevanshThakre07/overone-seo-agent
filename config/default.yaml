@@ -57,11 +57,17 @@ gsc:
   client_secrets_file: secrets/google-oauth-client.json
   redirect_uri: http://localhost:8000/auth/callback
   token_db_path: data/gsc_tokens.db
+  # Mirror of Google Cloud OAuth consent Publishing status (owner-declared).
+  # testing | production | unspecified
+  oauth_publishing_status: testing
+  # privacy_policy_url / homepage_url — set via GSC_PRIVACY_POLICY_URL / GSC_HOMEPAGE_URL
 
 # PageSpeed Insights — Core Web Vitals / Lighthouse (API key, no OAuth).
 pagespeed:
   enabled: true
   # Set via GOOGLE_PAGESPEED_API_KEY in .env
+  # Default mobile: Google ranking/CWV are mobile-first; `both` ~2x PSI time/quota.
+  # Use strategy desktop|both only for deep checks (API/Hermes), not every audit.
   strategy: mobile  # mobile | desktop | both
   timeout_seconds: 90
   performance_score_warn: 50

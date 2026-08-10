@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from app.models.audit import SiteAudit
 from app.models.crawl import CrawlStats
 from app.models.issues import Issue, Severity
@@ -8,6 +10,7 @@ from app.models.page import PageExtraction
 from app.models.reports import ReportFormat
 from app.reports.builder import build_report_document
 from app.reports.markdown_report import render_markdown
+from app.reports.pdf_report import PdfDependencyError, PDF_EXTRA_HINT
 from app.services.report_service import ReportService
 
 
@@ -107,10 +110,58 @@ def test_report_service_json_and_markdown(tmp_path):
     assert js.document is not None
 
 
-def test_pdf_not_implemented():
+def _pdf_text(raw: bytes) -> str:
+    import re
+    import zlib
+
+    chunks: list[str] = []
+    for match in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", raw, re.S):
+        data = match.group(1)
+        try:
+            data = zlib.decompress(data)
+        except zlib.error:
+            pass
+        chunks.append(data.decode("latin-1", errors="replace"))
+    return "\n".join(chunks)
+
+
+def test_pdf_generates_valid_bytes(tmp_path):
+    pytest.importorskip("fpdf")
+    from app.reports.pdf_report import render_pdf
+
+    audit = _sample_audit()
+    raw = render_pdf(audit)
+    assert raw.startswith(b"%PDF")
+    assert len(raw) > 500
+    text = _pdf_text(raw)
+    assert "Optimize advice" in text
+    assert "Example Domain | Official Site" in text
+
     service = ReportService()
-    try:
-        service.generate(_sample_audit(), ReportFormat.PDF)
-        assert False, "expected NotImplementedError"
-    except NotImplementedError:
-        pass
+    artifact = service.generate(audit, ReportFormat.PDF, out_path=tmp_path / "r.pdf")
+    assert artifact.metadata.get("content_encoding") == "base64"
+    assert artifact.metadata.get("media_type") == "application/pdf"
+    assert (tmp_path / "r.pdf").read_bytes().startswith(b"%PDF")
+    assert service.pdf_bytes(artifact).startswith(b"%PDF")
+
+
+def test_pdf_omits_optimize_when_absent():
+    pytest.importorskip("fpdf")
+    from app.reports.pdf_report import render_pdf
+
+    audit = _sample_audit()
+    audit.optimization = None
+    raw = render_pdf(audit)
+    assert raw.startswith(b"%PDF")
+    assert "Optimize advice" not in _pdf_text(raw)
+
+
+def test_pdf_missing_dependency_message(monkeypatch):
+    from app.reports import pdf_report
+
+    def _boom():
+        raise PdfDependencyError(PDF_EXTRA_HINT)
+
+    monkeypatch.setattr(pdf_report, "_require_fpdf", _boom)
+    with pytest.raises(PdfDependencyError, match="seo-agent\\[pdf\\]"):
+        pdf_report.render_pdf(_sample_audit())

@@ -57,11 +57,15 @@ seo-report --url https://example.com -o report.md --max-pages 5
 # Structured JSON report sections
 seo-report --url https://example.com -f json -o report.json
 
+# PDF (requires: pip install 'seo-agent[pdf]')
+seo-report --audit-id <id> -f pdf -o report.pdf
+
 # From a saved audit id (requires --save on audit/report)
 seo-report --audit-id <id> -f markdown -o report.md
 ```
 
-Each report includes: Summary, Critical Issues, Warnings, Suggestions, Overall SEO Score (PDF planned later).
+Each report includes: Summary, Critical Issues, Warnings, Suggestions, Overall SEO Score.  
+PDF download: `GET /report/{audit_id}?format=pdf` or public `GET /share/{token}?format=pdf`.
 
 ### Phase 4 — Memory & compare
 
@@ -75,7 +79,7 @@ seo-compare https://example.com -o changes.md --max-pages 5
 seo-history https://example.com
 ```
 
-Audits are stored in SQLite (`SEO_STORAGE_PATH`, default `data/audits.db`) via the repository interface.
+Audits, background jobs, schedules, and share links default to SQLite (`SEO_STORAGE_PATH`, default `data/audits.db`). Set `SEO_DATABASE_URL` or `DATABASE_URL` to use Postgres for all of them (`pip install 'seo-agent[postgres]'`). `POST /audit` with `background=true` (and due schedules) enqueue durable jobs; poll `GET /jobs/{job_id}` (`pending|running|completed|failed`).
 
 ### Phase 5 — FastAPI
 
@@ -106,7 +110,7 @@ Env overrides: [`.env.example`](.env.example)
 
 - [x] Phase 1: crawler, extractor, plugin analyzers, services, tools, CLI
 - [x] Phase 2: AI optimizer (`OptimizerService`, `seo-optimize`, `--optimize`)
-- [x] Phase 3: JSON/Markdown reports (`seo-report`, PDF stub)
+- [x] Phase 3: JSON/Markdown/PDF reports (`seo-report`; PDF via `seo-agent[pdf]`)
 - [x] Phase 4: SQLite memory, compare/history, change reports
 - [x] Phase 5: FastAPI (`seo-api`, OpenAPI at `/docs`)
 - [x] Hermes plugin adapter (in SEO-Agent only; symlink to `~/.hermes/plugins/`)

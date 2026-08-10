@@ -26,6 +26,18 @@ class AuditOptions(BaseModel):
     # Run PageSpeed Insights on the seed URL when an API key is configured.
     # None = auto (run if GOOGLE_PAGESPEED_API_KEY is set).
     pagespeed: bool | None = None
+    # Authenticated crawl (Phase 1): in-memory only; never persisted.
+    # Credentials are ignored unless use_authenticated_crawl is True (opt-in).
+    auth_cookie: str | None = None
+    auth_headers: dict[str, str] = Field(default_factory=dict)
+    use_authenticated_crawl: bool = False
+    # Phase 2 competitive enrichment — NEVER default on (paid DataForSEO calls).
+    # include_serp requires target_keywords; include_backlinks uses seed host.
+    include_serp: bool = False
+    include_backlinks: bool = False
+    # Phase A GA4 — opt-in; uses same Connect Google account_id as GSC.
+    include_ga4: bool = False
+    ga4_property_id: str | None = None
 
 
 class SiteAudit(BaseModel):

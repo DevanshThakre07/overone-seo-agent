@@ -19,11 +19,28 @@ class AuditRequest(BaseModel):
     gsc_account_id: str | None = None
     # None = auto-run PageSpeed when GOOGLE_PAGESPEED_API_KEY is set.
     pagespeed: bool | None = None
+    # Authenticated crawl — in-memory only; ignored unless use_authenticated_crawl.
+    auth_cookie: str | None = None
+    auth_headers: dict[str, str] = Field(default_factory=dict)
+    use_authenticated_crawl: bool = False
+    # Phase 2 — opt-in paid competitive enrichment (never auto).
+    include_serp: bool = False
+    include_backlinks: bool = False
+    # GA4 — opt-in; needs gsc_account_id. property_id optional if preference saved.
+    include_ga4: bool = False
+    ga4_property_id: str | None = None
 
 
 class OptimizeRequest(BaseModel):
     url: HttpUrl
     target_keywords: list[str] = Field(default_factory=list)
+    auth_cookie: str | None = None
+    auth_headers: dict[str, str] = Field(default_factory=dict)
+    use_authenticated_crawl: bool = False
+
+
+class LoginWallRequest(BaseModel):
+    url: HttpUrl
 
 
 class ReportRequest(BaseModel):

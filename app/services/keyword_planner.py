@@ -13,6 +13,7 @@ import re
 from typing import Any
 
 from app.config.settings import Settings, get_settings
+from app.crawler.auth import auth_policy_block, build_crawl_auth
 from app.extractor.html_extractor import HtmlExtractor
 from app.logging import get_logger, log_event
 from app.models.page import PageExtraction
@@ -68,12 +69,35 @@ class KeywordPlanner:
         self.crawler_service = crawler_service or CrawlerService(self.settings)
         self.extractor = extractor or HtmlExtractor()
 
-    def plan(self, url: str, *, target_keywords: list[str] | None = None) -> dict[str, Any]:
+    def plan(
+        self,
+        url: str,
+        *,
+        target_keywords: list[str] | None = None,
+        auth_cookie: str | None = None,
+        auth_headers: dict[str, str] | None = None,
+        use_authenticated_crawl: bool = False,
+    ) -> dict[str, Any]:
         log_event(logger, "keyword_plan_started", url=url)
         keyword_meta = normalize_caller_keywords(target_keywords)
         keywords = keyword_meta["keywords"]
+        crawl_auth = build_crawl_auth(
+            auth_cookie=auth_cookie,
+            auth_headers=auth_headers,
+        )
+        use_auth = bool(use_authenticated_crawl) and bool(crawl_auth)
+        login_wall = self.crawler_service.probe_login_wall(url)
+        auth_meta = auth_policy_block(
+            auth=crawl_auth,
+            use_authenticated_crawl=use_authenticated_crawl,
+            login_wall=login_wall,
+            credentials_used=use_auth,
+        )
 
-        page, fetch = self.fetch_live_page(url)
+        page, fetch = self.fetch_live_page(
+            url,
+            auth=crawl_auth if use_auth else None,
+        )
         if page is None or page.is_broken:
             reason = humanize_fetch_error(
                 fetch.get("error") or (page.error if page else None)
@@ -93,6 +117,7 @@ class KeywordPlanner:
                 "placements": [],
                 "findings": [],
                 "write_policy": build_write_policy(url),
+                "crawl_auth": auth_meta,
             }
 
         integrity = check_url_integrity(
@@ -125,15 +150,21 @@ class KeywordPlanner:
             "placements": placements,
             "write_policy": build_write_policy(url),
             "notes": [keyword_meta["message"]],
+            "crawl_auth": auth_meta,
         }
 
-    def fetch_live_page(self, url: str) -> tuple[PageExtraction | None, dict[str, Any]]:
+    def fetch_live_page(
+        self,
+        url: str,
+        *,
+        auth=None,
+    ) -> tuple[PageExtraction | None, dict[str, Any]]:
         """Fetch + render the URL. Returns (page, fetch_diagnostics)."""
         crawl = self.settings.crawl
         original = (crawl.max_pages, crawl.max_depth, crawl.check_external_links)
         crawl.max_pages, crawl.max_depth, crawl.check_external_links = 1, 0, False
         try:
-            results, stats = self.crawler_service.crawl(url)
+            results, stats = self.crawler_service.crawl(url, auth=auth)
         except Exception as exc:  # noqa: BLE001
             log_event(logger, "keyword_plan_fetch_failed", url=url, error=str(exc))
             return None, {"ok": False, "url": url, "error": str(exc), "method": "http"}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.logging import get_logger, log_event
 from app.models.audit import SiteAudit
 from app.models.diff import AuditDiff
@@ -33,6 +35,46 @@ class MemoryService:
 
     def latest(self, url: str) -> SiteAudit | None:
         return self.repository.latest(normalize_url(url))
+
+    def trends(self, url: str, *, limit: int = 20) -> dict[str, Any]:
+        """Score + severity series for retainer tracking (oldest → newest)."""
+        seed = normalize_url(url)
+        audits = list(reversed(self.history(seed, limit=max(1, min(limit, 100)))))
+        points: list[dict[str, Any]] = []
+        for audit in audits:
+            severity = (audit.summary or {}).get("severity") or {}
+            if not severity and audit.issues:
+                severity = {
+                    "critical": sum(1 for i in audit.issues if i.severity.value == "critical"),
+                    "warning": sum(1 for i in audit.issues if i.severity.value == "warning"),
+                    "info": sum(1 for i in audit.issues if i.severity.value == "info"),
+                }
+            points.append(
+                {
+                    "audit_id": audit.audit_id,
+                    "created_at": audit.created_at.isoformat(),
+                    "score": audit.score,
+                    "issue_count": len(audit.issues),
+                    "pages": len(audit.pages),
+                    "critical": int(severity.get("critical") or 0),
+                    "warning": int(severity.get("warning") or 0),
+                    "info": int(severity.get("info") or 0),
+                }
+            )
+        score_delta = None
+        if len(points) >= 2:
+            score_delta = round(points[-1]["score"] - points[0]["score"], 1)
+        return {
+            "url": seed,
+            "count": len(points),
+            "score_delta": score_delta,
+            "points": points,
+            "message": (
+                f"{len(points)} audit(s) for trend."
+                if points
+                else "No saved audits for this URL. Run audit with save=true first."
+            ),
+        }
 
     def compare(
         self,

@@ -75,3 +75,57 @@ def test_playwright_works_inside_asyncio_loop():
         assert result.ok or result.html or result.error not in {None, ""}
 
     asyncio.run(run())
+
+
+def test_merge_gsc_into_recommendations_attaches_actions():
+    from app.analyzers.recommendations import merge_gsc_into_recommendations
+
+    recs = [
+        {
+            "url": "https://example.com/",
+            "actions": [{"code": "missing_canonical", "message": "add canonical"}],
+        }
+    ]
+    gsc = {
+        "status": "ok",
+        "snapshot": {
+            "opportunities": [
+                {
+                    "kind": "page2",
+                    "query": "active learning",
+                    "page": "https://example.com/",
+                    "impressions": 120,
+                    "clicks": 5,
+                    "ctr": 0.04,
+                    "position": 14.2,
+                    "why": "page 2",
+                },
+                {
+                    "kind": "low_ctr",
+                    "query": "weak snippet",
+                    "page": "https://example.com/blog",
+                    "impressions": 200,
+                    "clicks": 2,
+                    "ctr": 0.01,
+                    "position": 4.0,
+                    "why": "low ctr",
+                },
+            ],
+            "opportunity_count": 2,
+        },
+    }
+    merged = merge_gsc_into_recommendations(recs, gsc)
+    home = next(r for r in merged if "example.com" in r["url"] and "/blog" not in r["url"])
+    assert any(a["code"] == "gsc_page2_opportunity" for a in home["actions"])
+    blog = next(r for r in merged if r["url"].endswith("/blog"))
+    assert blog.get("source") == "google_search_console"
+    assert any(a["code"] == "gsc_low_ctr" for a in blog["actions"])
+
+
+def test_merge_gsc_skipped_when_not_ok():
+    from app.analyzers.recommendations import merge_gsc_into_recommendations
+
+    recs = [{"url": "https://example.com/", "actions": []}]
+    out = merge_gsc_into_recommendations(recs, {"status": "no_matching_property"})
+    assert out == recs
+    assert merge_gsc_into_recommendations(recs, None) == recs

@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import requests
 
@@ -82,20 +82,28 @@ def build_authorization_url(
     *,
     state: str,
     access_type: str = "offline",
-    prompt: str = "consent",
+    prompt: str = "select_account consent",
+    scopes: list[str] | None = None,
 ) -> str:
-    """Build the Google consent URL. prompt=consent ensures a refresh_token."""
+    """Build the Google consent URL.
+
+    Uses %20 encoding (not '+') and puts prompt early — avoids Google 400
+    invalid_request when the Location URL gets mangled/truncated.
+    prompt includes select_account + consent so the user can pick the
+    test Gmail and re-grant Analytics.
+    """
+    scope_list = list(scopes) if scopes is not None else list(credentials.scopes)
     params = {
         "client_id": credentials.client_id,
         "redirect_uri": credentials.redirect_uri,
         "response_type": "code",
-        "scope": " ".join(credentials.scopes),
         "access_type": access_type,
-        "include_granted_scopes": "true",
-        "state": state,
         "prompt": prompt,
+        "include_granted_scopes": "true",
+        "scope": " ".join(scope_list),
+        "state": state,
     }
-    return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
+    return f"{GOOGLE_AUTH_URL}?{urlencode(params, quote_via=quote)}"
 
 
 def exchange_code_for_tokens(

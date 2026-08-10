@@ -70,19 +70,37 @@ class LinksAnalyzer:
                     )
                 )
 
-        # External probes stored as crawl_results with depth == -1
+        # External probes stored as crawl_results with depth == -1.
+        # Cap + INFO: outbound 404s are noisy and often not under the client's
+        # control; keep a sample for visibility without flooding the score.
+        _MAX_BROKEN_EXTERNAL_ISSUES = 5
         for result in context.crawl_results:
             if result.depth == -1 and result.is_broken:
                 broken_external += 1
-                issues.append(
-                    Issue(
-                        code="broken_external_link",
-                        severity=Severity.WARNING,
-                        message=result.error or "Broken external link",
-                        url=result.url,
-                        details={"status_code": result.status_code},
+                if broken_external <= _MAX_BROKEN_EXTERNAL_ISSUES:
+                    issues.append(
+                        Issue(
+                            code="broken_external_link",
+                            severity=Severity.INFO,
+                            message=result.error or "Broken external link",
+                            url=result.url,
+                            details={"status_code": result.status_code},
+                        )
                     )
+        if broken_external > _MAX_BROKEN_EXTERNAL_ISSUES:
+            issues.append(
+                Issue(
+                    code="broken_external_link_summary",
+                    severity=Severity.INFO,
+                    message=(
+                        f"{broken_external} broken external links detected "
+                        f"(showing {_MAX_BROKEN_EXTERNAL_ISSUES} samples). "
+                        "Review outbound links when they affect UX or trust."
+                    ),
+                    url=context.seed_url,
+                    details={"broken_external_links": broken_external},
                 )
+            )
 
         return AnalyzerResult(
             analyzer=self.name,

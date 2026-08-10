@@ -53,6 +53,18 @@ def build_report_document(audit: SiteAudit) -> ReportDocument:
     if audit.diff is not None:
         notes.append(audit.diff.summary or "Comparison completed.")
 
+    gsc = (audit.summary or {}).get("google_search_console") or {}
+    if gsc.get("status") == "ok":
+        snap = gsc.get("snapshot") or {}
+        n_opp = int(snap.get("opportunity_count") or len(snap.get("opportunities") or []))
+        notes.append(
+            f"Google Search Console: {n_opp} opportunit"
+            f"{'y' if n_opp == 1 else 'ies'} merged into recommendations "
+            f"(site {snap.get('site_url') or gsc.get('site_url') or 'matched'})."
+        )
+    elif gsc.get("status") not in (None, "skipped") and gsc.get("message"):
+        notes.append(f"Google Search Console: {gsc.get('message')}")
+
     page_overview = [
         {
             "url": page.final_url,
@@ -73,7 +85,9 @@ def build_report_document(audit: SiteAudit) -> ReportDocument:
             "images_missing_alt": sum(
                 1
                 for img in page.images
-                if img.alt is None or not str(img.alt).strip()
+                if (not img.alt_present)
+                and (not img.decorative)
+                and (not getattr(img, "is_source", False))
             ),
             "internal_links": len(page.internal_links),
             "internal_link_occurrences": page.internal_link_occurrences,

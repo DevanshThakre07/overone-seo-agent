@@ -15,6 +15,7 @@ from app.integrations.google.oauth import (
     load_oauth_credentials,
     refresh_access_token,
 )
+from app.integrations.google.oauth_production import production_checklist
 from app.integrations.google.search_console import SearchConsoleClient, SearchConsoleError
 from app.integrations.google.token_store import GoogleTokenStore
 from app.logging import get_logger, log_event
@@ -34,13 +35,26 @@ class GoogleSearchConsoleService:
         except GoogleOAuthError:
             return False
 
-    def start_connect(self, account_id: str) -> dict[str, str]:
+    def start_connect(
+        self,
+        account_id: str,
+        *,
+        include_analytics: bool = True,
+    ) -> dict[str, str]:
         """Return the Google consent URL for this customer account_id."""
         credentials = load_oauth_credentials(self.settings.gsc)
         state = secrets.token_urlsafe(24)
         self.store.save_pending_state(state, account_id)
-        url = build_authorization_url(credentials, state=state)
-        log_event(logger, "gsc_connect_started", account_id=account_id)
+        scopes = list(credentials.scopes)
+        if not include_analytics:
+            scopes = [s for s in scopes if "analytics.readonly" not in s]
+        url = build_authorization_url(credentials, state=state, scopes=scopes)
+        log_event(
+            logger,
+            "gsc_connect_started",
+            account_id=account_id,
+            include_analytics=include_analytics,
+        )
         return {"authorization_url": url, "state": state, "account_id": account_id}
 
     def complete_connect(self, *, code: str, state: str) -> dict[str, Any]:
@@ -74,41 +88,87 @@ class GoogleSearchConsoleService:
             email=tokens.email,
             has_refresh=bool(tokens.refresh_token),
         )
+        scopes = tokens.scope or ""
+        has_analytics = "analytics.readonly" in scopes
         return {
             "status": "connected",
             "account_id": account_id,
             "email": tokens.email,
             "has_refresh_token": bool(tokens.refresh_token),
+            "has_analytics_scope": has_analytics,
             "message": (
-                "Google Search Console connected. "
-                "Use GET /gsc/sites to list verified properties for this account."
+                "Google connected (Search Console"
+                + (" + Analytics" if has_analytics else "")
+                + "). "
+                "Use GET /gsc/sites for Search Console, GET /ga4/properties for GA4."
             ),
         }
 
     def status(self, account_id: str) -> dict[str, Any]:
         configured = self.is_configured()
+        publishing = production_checklist(self.settings.gsc)
+        pub_fields = {
+            "oauth_publishing_status": publishing["publishing_status"],
+            "customer_access": publishing["customer_access"],
+            "redirect_uri": publishing["redirect_uri"],
+            "production_ready": publishing["production_ready"],
+        }
         conn = self.store.get_connection(account_id)
         if conn is None:
+            testing_note = ""
+            if publishing["publishing_status"] == "testing":
+                testing_note = (
+                    " OAuth consent is still Testing — only Google accounts listed "
+                    "as Test users can connect. See GET /auth/google/production."
+                )
             return {
                 "configured": configured,
                 "connected": False,
                 "account_id": account_id,
                 "email": None,
+                **pub_fields,
                 "message": (
-                    "Not connected. Open GET /auth/google/start?account_id=... "
-                    "to connect this customer's Google account."
+                    (
+                        "Not connected. Open GET /auth/google/start?account_id=... "
+                        "to connect this customer's Google account."
+                        + testing_note
+                    )
                     if configured
                     else "OAuth client not configured yet."
                 ),
             }
+        scopes = conn.scopes or ""
+        message = None
+        if "analytics.readonly" not in scopes:
+            message = (
+                "Connected for Search Console only. Re-open "
+                "/auth/google/start?account_id=... to grant Analytics (GA4)."
+            )
+        elif publishing["publishing_status"] == "testing":
+            message = (
+                "Connected (Testing mode). Real customers need OAuth Production — "
+                "see GET /auth/google/production."
+            )
         return {
             "configured": configured,
             "connected": True,
             "account_id": account_id,
             "email": conn.email,
             "has_refresh_token": bool(conn.refresh_token),
+            "has_analytics_scope": "analytics.readonly" in scopes,
             "updated_at": conn.updated_at,
             "scopes": conn.scopes,
+            **pub_fields,
+            "message": message,
+        }
+
+    def production_status(self) -> dict[str, Any]:
+        """Owner checklist for publishing OAuth consent to Production."""
+        configured = self.is_configured()
+        checklist = production_checklist(self.settings.gsc)
+        return {
+            "configured": configured,
+            **checklist,
         }
 
     def disconnect(self, account_id: str) -> dict[str, Any]:
@@ -208,6 +268,10 @@ class GoogleSearchConsoleService:
                 "account_id": account_id,
                 "message": str(exc),
             }
+
+    def access_token_for(self, account_id: str) -> str:
+        """Public alias for integrations that share the same Google connection."""
+        return self._fresh_access_token(account_id)
 
     def _fresh_access_token(self, account_id: str) -> str:
         conn = self.store.get_connection(account_id)

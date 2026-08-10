@@ -21,7 +21,7 @@ Credentials and external APIs needed to make this agent production-grade, plus h
 | **Google Search Console API** | Real queries, clicks, CTR, position, index/property list, page-2 opportunities | OAuth 2.0 (per customer) | `GSC_CLIENT_SECRETS_FILE`, `GSC_REDIRECT_URI`, `GSC_TOKEN_DB_PATH`, optional `GSC_CLIENT_ID` / `GSC_CLIENT_SECRET` | **Wired** (Connect Google) |
 | **PageSpeed Insights API** | Lighthouse + lab Core Web Vitals (LCP, CLS, INP) | API key | `GOOGLE_PAGESPEED_API_KEY`, optional `PAGESPEED_STRATEGY` | **Wired** |
 | **Chrome UX Report (CrUX)** | Real-user field vitals | API key | `GOOGLE_CRUX_API_KEY` | Not built yet |
-| **Google Analytics Data API (GA4)** | Traffic / conversions per URL (weight issues by business impact) | OAuth 2.0 | `GA4_PROPERTY_ID`, `GA4_CLIENT_ID`, `GA4_CLIENT_SECRET`, `GA4_REFRESH_TOKEN` (or reuse Connect Google with extra scopes) | Not built yet |
+| **Google Analytics Data API (GA4)** | Traffic snapshot (sessions / users / top pages) | OAuth 2.0 (`analytics.readonly`) | Reuse Connect Google `account_id`; enable Admin + Data APIs | ✅ `/ga4/*` + preferred property picker |
 | **Bing Webmaster Tools** (optional) | Bing queries / index | API key | `BING_WEBMASTER_API_KEY` | Not built yet |
 
 **Enable in Google Cloud → APIs & Services → Library:**
@@ -51,20 +51,21 @@ Without this tier, optimize/audit must **not** invent search volume — only key
 | Service | Why | Env vars | Status |
 |---------|-----|----------|--------|
 | **Scraper proxy** (ScraperAPI / Zyte / Bright Data) | Avoid 403 / bot blocks on big sites | `SCRAPER_API_KEY` or `SCRAPER_PROXY_URL` | Not built |
-| **API auth for our FastAPI** | Stop open crawl endpoints | `SEO_API_KEY` or JWT (design TBD) | Not built |
-| **Postgres** (later) | Replace SQLite for multi-tenant production | `DATABASE_URL` | SQLite today |
-| **Worker queue** (Celery / arq) | Long crawls / scheduled audits | Redis/broker URL | In-process jobs today |
+| **API auth for our FastAPI** | Stop open crawl endpoints | `SEO_API_KEY` (Bearer / `X-API-Key`) | **Wired** (off when unset) |
+| **Postgres** (4A) | Optional production storage for audits + jobs | `SEO_DATABASE_URL` / `DATABASE_URL` | SQLite default local/dev |
+| **Worker queue** (4A) | Durable DB-backed jobs (`pending|running|completed|failed`) | same DB as storage | Thread workers in `seo-api`; Celery/Redis still optional later |
 
 ### Suggested build order
 
-1. Search Console (done for Connect + basic client) → verify with a real property *(postponed)*  
+1. Search Console Connect ✅ → **verify a real property** *(your step)*  
 2. PageSpeed Insights ✅  
 3. Hermes tools for PageSpeed ✅ (`check_pagespeed`)  
-4. Feed GSC opportunities into recommendations *(postponed with GSC verify)*  
+4. Feed GSC opportunities into recommendations ✅ (code; needs verified property for live data)  
 5. DataForSEO Keyword Data ✅ (`research_keywords`, `/keywords/research`)  
 6. DataForSEO Labs ✅ (difficulty + related)  
 7. CrUX / GA4  
-8. Proxy + API auth + Production OAuth publish  
+8. API auth ✅ (`SEO_API_KEY`)  
+9. Proxy + Production OAuth publish (checklist + `/auth/google/production` ✅; Cloud Publish = owner)  
 
 ---
 
@@ -103,6 +104,7 @@ No OAuth — only an API key. If the key is missing, audits skip PSI cleanly.
 
 - PSI is **slow** (often 15–60s) and rate-limited — we only hit the seed URL, not every crawled page.
 - `PAGESPEED_STRATEGY`: `mobile` | `desktop` | `both`
+- **Config decision — default `mobile`:** Google’s ranking / Core Web Vitals signals are **mobile-first**, so audits and `check_pagespeed` default to mobile. `both` roughly **doubles** PSI API time and quota. Desktop is available via `strategy=desktop` or `strategy=both` (API query, Hermes arg, or `.env`) for deep checks, but is **intentionally not** run by default on every audit.
 
 ---
 
@@ -169,18 +171,56 @@ Without Connect Google, **technical crawl audits still work**. GSC-only features
 - Only emails listed under **Test users** can Connect Google.
 - Fine for you + a few beta testers.
 - **Real customers should not be expected to be added as test users.**
+- SEO-Agent defaults `GSC_OAUTH_PUBLISHING_STATUS=testing` so Connect Google / status APIs warn honestly.
 
 #### When you go live
 
-1. Publish OAuth consent screen to **Production**.
-2. Complete **Google verification** if required for your scopes (Search Console read often needs verification for public use).
-3. After that, customers only: Connect Google → Allow. No Cloud Console, no test-user list.
+1. Publish OAuth consent screen to **Production** (checklist below).
+2. Complete **Google verification** if required for your scopes (Search Console + Analytics readonly usually need it for broad public use).
+3. Set env to match Cloud Console, restart `seo-api`.
+4. After that, customers only: Connect Google → Allow. No Cloud Console, no test-user list.
 
 #### After you deploy the app somewhere
 
 1. Add production callback in Google Cloud, e.g. `https://yourdomain.com/auth/callback`.
 2. Set `GSC_REDIRECT_URI` to that **same** URL.
 3. Keep local `http://localhost:8000/auth/callback` if you still develop locally (both can be listed).
+
+### OAuth Production publish checklist
+
+> **Owner-owned in Google Cloud.** Code cannot flip Publishing status for you.  
+> Track progress: `GET /auth/google/production` · privacy stub: `GET /legal/privacy`
+
+| # | You do (Google Cloud / hosting) | SEO-Agent env / endpoint |
+|---|----------------------------------|---------------------------|
+| 1 | OAuth consent screen: app name, support email, logo, developer contact | — |
+| 2 | Application home page URL (HTTPS) | `GSC_HOMEPAGE_URL=https://YOUR_DOMAIN/` |
+| 3 | Privacy policy URL (HTTPS, public) | Deploy seo-api → use `https://YOUR_DOMAIN/legal/privacy` **or** your own page; set `GSC_PRIVACY_POLICY_URL` to the same URL you paste in Cloud |
+| 4 | Authorized domains = your product domain | — |
+| 5 | OAuth client redirect URI = `https://YOUR_DOMAIN/auth/callback` (+ keep localhost for dev) | `GSC_REDIRECT_URI=https://YOUR_DOMAIN/auth/callback` |
+| 6 | Enable APIs: Search Console, Analytics Admin, Analytics Data (+ PageSpeed if used) | — |
+| 7 | Consent screen → **Publish app** → Production | `GSC_OAUTH_PUBLISHING_STATUS=production` then restart `seo-api` |
+| 8 | Submit **verification** if Google asks (sensitive scopes) | Justify `webmasters.readonly` + `analytics.readonly`; demo video of Connect Google → Allow → `/gsc/sites` |
+| 9 | Protect the API on the public host | `SEO_API_KEY=...` (OAuth start/callback + `/legal/*` stay public) |
+
+**Scopes we request (sensitive):**
+
+- `https://www.googleapis.com/auth/webmasters.readonly`
+- `https://www.googleapis.com/auth/analytics.readonly`
+- `openid` / `email` (account label)
+
+**What “done” looks like**
+
+```bash
+curl -s http://localhost:8000/auth/google/production | python -m json.tool
+# publishing_status: production
+# production_ready: true
+# customer_access: any_google_account
+# blocking: []
+```
+
+Connect Google HTML stops warning about Test users once `GSC_OAUTH_PUBLISHING_STATUS=production`.  
+`access_denied` while still Testing returns a clear HTML hint to add Test users.
 
 ### Customer journey (GSC)
 
@@ -234,11 +274,24 @@ KEYWORD_API_PASSWORD=
 # GA4_CLIENT_SECRET=
 # GA4_REFRESH_TOKEN=
 
+# --- API auth (protect seo-api when exposed) ---
+# SEO_API_KEY=
+
 # --- Crawl hardening (planned) ---
 # SCRAPER_API_KEY=
 # SCRAPER_PROXY_URL=
-# SEO_API_KEY=
 ```
+
+### Reminder — `SEO_API_KEY`
+
+This is **our** password for the FastAPI (`seo-api`), not a Google / DataForSEO / Hermes key.
+
+| Situation | What to do |
+|-----------|------------|
+| **Local / Hermes only** | Leave `SEO_API_KEY` empty or commented out. Auth is off. |
+| **API exposed** (deploy, public URL, shared network) | Set a long random secret in `SEO-Agent/.env`, restart `seo-api`, and send `Authorization: Bearer <key>` or `X-API-Key: <key>` on protected routes. |
+
+Public without the key: `/health`, `/docs`, `/auth/google/start`, `/auth/callback`. Generate one with e.g. `openssl rand -hex 32`.
 
 ---
 
@@ -253,7 +306,7 @@ KEYWORD_API_PASSWORD=
 
 ## Project status board (living)
 
-> **Maintain this section** after every completed task: move items Done ↔ Todo, update “How it works”, and note new env vars / endpoints. Last updated: **2026-08-06** (DataForSEO Labs).
+> **Maintain this section** after every completed task: move items Done ↔ Todo, update “How it works”, and note new env vars / endpoints. Last updated: **2026-08-08** (Hermes GSC tools).
 
 ### Snapshot
 
@@ -261,19 +314,21 @@ KEYWORD_API_PASSWORD=
 |------|--------|--------|
 | Core crawl → analyze → score → report | ✅ Done | FastAPI + Hermes plugin |
 | LLM optimize / keyword *placement* | ✅ Done | Needs `OPENAI_API_KEY` for optimize |
-| Google Search Console Connect + client | ✅ Done | OAuth wired; **property verify postponed** |
-| GSC → recommendations loop | ⏸ Postponed | Needs a verified GSC property |
+| Google Search Console Connect + client | ✅ Done | OAuth wired; live data needs property verify |
+| GSC → recommendations loop | ✅ Done | Needs verified property + `gsc_account_id` |
 | PageSpeed Insights / Core Web Vitals | ✅ Done | API key; seed URL only |
 | Hermes `check_pagespeed` | ✅ Done | Restart Hermes session to load |
 | DataForSEO Keywords Data (volume/CPC) | ✅ Done | Login + password; pay-as-you-go |
 | DataForSEO Labs (difficulty / related) | ✅ Done | Same credentials; enriches `/keywords/research` |
 | Hermes `research_keywords` | ✅ Done | Volume + difficulty + related |
+| Hermes smoke (keywords + PageSpeed + audit_site + keyword_plan) | ✅ Done | Confirmed 2026-08-07 |
+| Hermes GSC tools (`gsc_status` / `gsc_sites` / `gsc_performance`) | ✅ Done | OAuth still via browser/`seo-api` |
+| API auth (`SEO_API_KEY`) | ✅ Done | Bearer / `X-API-Key`; off when unset |
 | CrUX (standalone field vitals) | ❌ Todo | Overlaps PSI field data |
-| GA4 traffic weighting | ❌ Todo | Extra OAuth scopes |
-| API auth (`SEO_API_KEY` / JWT) | ❌ Todo | Harden before real customers |
+| GA4 traffic (properties + report + preferred picker) | ✅ | `PUT /ga4/preference`; audits can omit property_id |
 | Scraper proxy | ❌ Todo | Big-site 403s |
-| Production OAuth publish | ❌ Todo | Needed for non–test-user customers |
-| Postgres + worker queue | ❌ Todo | Multi-tenant / long jobs later |
+| Production OAuth publish | 🔶 Code/docs ✅ | Owner still Publishes in Google Cloud + sets `GSC_OAUTH_PUBLISHING_STATUS` |
+| Postgres + worker queue | ✅ 4A + F | Audits/jobs/schedules/shares; due schedules → `/jobs` |
 
 ---
 
@@ -281,10 +336,13 @@ KEYWORD_API_PASSWORD=
 
 1. **SEO engine core** — crawl, extract, analyzers, scoring, Markdown/JSON reports, SQLite history.
 2. **Hermes plugin** (`integrations/hermes/seo_agent_plugin`) — tools without editing `hermes-agent` source.
-3. **Connect Google / GSC** — OAuth Web client, token store per `account_id`, `/gsc/sites`, `/gsc/performance`, audit enrichment via `gsc_account_id`. Demo account connects; `sites: []` until a property is verified *(postponed)*.
-4. **PageSpeed Insights** — `GOOGLE_PAGESPEED_API_KEY`; `/pagespeed`, `/pagespeed/status`; auto on audit seed URL; Hermes `check_pagespeed`.
-5. **DataForSEO Keywords Data** — volume, CPC, competition via `/keywords/research`.
-6. **DataForSEO Labs** — `keyword_difficulty` (0–100) + related/long-tail ideas; `/keywords/difficulty`, `/keywords/related`; auto-merged into `/keywords/research` and Hermes `research_keywords` (same login/password).
+3. **Connect Google / GSC** — OAuth Web client, token store per `account_id`, `/gsc/sites`, `/gsc/performance`, audit enrichment via `gsc_account_id`. Demo account connects; `sites: []` until a property is verified.
+4. **GSC → recommendations** — page-2 + low-CTR opportunities merge into `recommendations[].actions` (`gsc_page2_opportunity`, `gsc_low_ctr`). Hermes `audit_site` accepts `gsc_account_id`. Still needs a **verified** Search Console property matching the seed URL.
+4b. **Hermes GSC tools** — `gsc_status`, `gsc_sites`, `gsc_performance` (thin wrappers over `GoogleSearchConsoleService`). Connect Google still uses `/auth/google/start` in the browser.
+5. **PageSpeed Insights** — `GOOGLE_PAGESPEED_API_KEY`; `/pagespeed`, `/pagespeed/status`; auto on audit seed URL; Hermes `check_pagespeed`.
+6. **DataForSEO Keywords Data** — volume, CPC, competition via `/keywords/research`.
+7. **DataForSEO Labs** — `keyword_difficulty` (0–100) + related/long-tail ideas; `/keywords/difficulty`, `/keywords/related`; auto-merged into `/keywords/research` and Hermes `research_keywords` (same login/password).
+8. **API auth** — set `SEO_API_KEY` to require `Authorization: Bearer …` or `X-API-Key` on protected routes; `/health`, `/docs`, `/auth/google/start`, `/auth/callback` stay public. Unset = open (local/dev). `/health` reports `api_auth_required`.
 
 ---
 
@@ -292,13 +350,11 @@ KEYWORD_API_PASSWORD=
 
 | Priority | Task | Blocked by |
 |----------|------|------------|
-| **Next** | Verify a GSC property + **GSC → recommendations** | User verifies any site in Search Console |
-| Medium | Smoke Hermes chat for pagespeed + keywords | New Hermes session |
-| Medium | FastAPI **API auth** | Design `SEO_API_KEY` or JWT |
-| Later | CrUX / GA4 | Keys / scopes |
+| **Next** | **Verify a GSC property** for a real site (Search Console) so enrichment returns data | You own a verified property matching the audit URL |
+| Done (A) | GA4 properties + report | Reuse Connect Google; CrUX still later |
 | Later | Scraper proxy | Vendor account |
-| Later | Production OAuth + deploy redirect URI | Hosting domain |
-| Later | Postgres + job queue | Scale needs |
+| Later | Production OAuth + deploy redirect URI | Hosting domain — checklist `#oauth-production-publish-checklist` |
+| Done (4A) | Postgres + durable job queue | SQLite still default local/dev |
 
 ---
 
@@ -314,7 +370,7 @@ KEYWORD_API_PASSWORD=
 | **Google — PSI** | PageSpeed Insights API key | Lab + field Core Web Vitals |
 | **DataForSEO — Keywords Data** ✅ | `google_ads/search_volume/live` | Volume, CPC, competition |
 | **DataForSEO — Labs** ✅ | `bulk_keyword_difficulty` + `related_keywords` | Difficulty 0–100, related ideas |
-| **DataForSEO — SERP / Backlinks** | Not selected yet | Optional later |
+| **DataForSEO — SERP / Backlinks** ✅ | `serp/google/organic/live/regular` + `backlinks/summary` + `referring_domains` | Opt-in only (`/serp`, `/rank`, `/backlinks`, Hermes tools, audit flags) |
 | **CrUX / GA4 / Bing / proxy** | Planned | See checklist above |
 
 **Why Labs (in addition to Keywords Data):**
@@ -386,4 +442,12 @@ Credentials live in **`SEO-Agent/.env`** only (not `hermes-agent/.env`). Restart
 | 2026-08-06 | PageSpeed Insights wired (API + audit + Hermes `check_pagespeed`) |
 | 2026-08-06 | DataForSEO Keywords Data wired (API + Hermes `research_keywords`) |
 | 2026-08-06 | DataForSEO Labs wired (difficulty + related; enrich research) |
-| — | *(next)* GSC property verify + GSC → recommendations |
+| 2026-08-06 | Fix: SEO settings always load `SEO-Agent/.env` (Hermes cwd was missing keys) |
+| 2026-08-06 | Hermes: set `tools.tool_search.enabled: off` so `research_keywords` is not deferred |
+| 2026-08-07 | Hermes smoke passed: research_keywords + check_pagespeed + audit_site |
+| 2026-08-07 | Hermes/in-process smoke: `keyword_plan` OK |
+| 2026-08-07 | FastAPI `SEO_API_KEY` auth (Bearer / X-API-Key; off when unset) |
+| 2026-08-07 | GSC → recommendations (page-2 + low CTR → actions; Hermes `gsc_account_id`) |
+| 2026-08-08 | Hermes `gsc_status` / `gsc_sites` / `gsc_performance` + `auth_headers` parity |
+| 2026-08-08 | Phase 2: SERP / rank / backlinks (DataForSEO; opt-in tools + audit flags) |
+| — | *(next)* Owner validate Phase 3 before building |

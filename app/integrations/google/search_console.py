@@ -106,18 +106,43 @@ class SearchConsoleClient:
             position = float(row.get("position") or 0)
             impressions = int(row.get("impressions") or 0)
             ctr = float(row.get("ctr") or 0)
+            clicks = int(row.get("clicks") or 0)
+            query, page = keys[0], keys[1]
+            base = {
+                "query": query,
+                "page": page,
+                "clicks": clicks,
+                "impressions": impressions,
+                "ctr": round(ctr, 4),
+                "position": round(position, 2),
+            }
+            # Page 2 with volume — push into top 10 via title/meta targeting the query.
             if 11.0 <= position <= 20.0 and impressions >= 50:
                 opportunities.append(
                     {
-                        "query": keys[0],
-                        "page": keys[1],
-                        "clicks": int(row.get("clicks") or 0),
-                        "impressions": impressions,
-                        "ctr": round(ctr, 4),
-                        "position": round(position, 2),
+                        **base,
+                        "kind": "page2",
                         "why": (
                             "Ranking on page 2 with meaningful impressions — "
                             "title/meta rewrite targeting this query is high ROI."
+                        ),
+                    }
+                )
+            # Strong position but weak CTR — snippet underperforming.
+            elif (
+                1.0 <= position <= 10.0
+                and impressions >= 50
+                and ctr < _ctr_floor_for_position(position)
+            ):
+                floor = _ctr_floor_for_position(position)
+                opportunities.append(
+                    {
+                        **base,
+                        "kind": "low_ctr",
+                        "why": (
+                            f"Position {position:.1f} with {impressions} impressions but "
+                            f"CTR {ctr:.1%} is below a typical ~{floor:.0%} floor — "
+                            "improve title/meta to win more clicks for this query."
                         ),
                     }
                 )
@@ -133,6 +158,17 @@ class SearchConsoleClient:
             "status": "ok",
             "source": "google_search_console",
         }
+
+
+def _ctr_floor_for_position(position: float) -> float:
+    """Conservative CTR floors — flag clearly weak snippets, not borderline ones."""
+    if position <= 3.0:
+        return 0.05
+    if position <= 5.0:
+        return 0.03
+    if position <= 10.0:
+        return 0.015
+    return 0.0
 
 
 def _rows_as_dicts(rows: list[dict[str, Any]], dim_names: list[str]) -> list[dict[str, Any]]:

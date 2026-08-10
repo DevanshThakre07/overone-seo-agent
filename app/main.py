@@ -128,7 +128,7 @@ def optimize_main(argv: list[str] | None = None) -> int:
 def build_report_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="seo-report",
-        description="Generate a downloadable SEO report (markdown or json).",
+        description="Generate a downloadable SEO report (markdown, json, or pdf).",
     )
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--url", help="Crawl/audit this URL then render a report")
@@ -138,7 +138,7 @@ def build_report_parser() -> argparse.ArgumentParser:
         "--format",
         choices=["markdown", "json", "pdf"],
         default="markdown",
-        help="Report format (pdf not implemented yet)",
+        help="Report format (pdf requires: pip install 'seo-agent[pdf]')",
     )
     parser.add_argument(
         "-o",
@@ -181,6 +181,12 @@ def report_main(argv: list[str] | None = None) -> int:
     except KeyError as exc:
         print(str(exc), file=sys.stderr)
         return 1
+
+    if args.format == "pdf":
+        print(artifact.path or "(pdf written)")
+        if artifact.metadata.get("byte_length"):
+            print(f"bytes={artifact.metadata['byte_length']}", file=sys.stderr)
+        return 0
 
     print(artifact.content)
     return 0

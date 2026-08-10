@@ -34,8 +34,14 @@ class PlaywrightFetchResult:
 
 
 class PlaywrightClient:
-    def __init__(self, settings: PlaywrightSettings) -> None:
+    def __init__(
+        self,
+        settings: PlaywrightSettings,
+        *,
+        extra_headers: dict[str, str] | None = None,
+    ) -> None:
         self.settings = settings
+        self.extra_headers = dict(extra_headers or {})
         self.last_result: PlaywrightFetchResult | None = None
 
     @staticmethod
@@ -169,12 +175,17 @@ class PlaywrightClient:
                 )
                 try:
                     stage("new_context")
-                    context = browser.new_context(
-                        user_agent=_DEFAULT_UA,
-                        viewport={"width": 1440, "height": 900},
-                        java_script_enabled=True,
-                        ignore_https_errors=True,
-                    )
+                    context_kwargs: dict[str, Any] = {
+                        "user_agent": _DEFAULT_UA,
+                        "viewport": {"width": 1440, "height": 900},
+                        "java_script_enabled": True,
+                        "ignore_https_errors": True,
+                    }
+                    if self.extra_headers:
+                        # Cookie / Authorization for GET navigation only — no form POST.
+                        context_kwargs["extra_http_headers"] = dict(self.extra_headers)
+                        stage("auth_headers_attached", names=sorted(self.extra_headers))
+                    context = browser.new_context(**context_kwargs)
                     context.add_init_script(
                         "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
                     )

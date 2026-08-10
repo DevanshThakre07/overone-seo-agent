@@ -1,11 +1,15 @@
-"""HTTP client built on Requests."""
+"""HTTP client built on Requests — GET/HEAD only (read-only crawl)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import requests
 from requests import Response
+
+if TYPE_CHECKING:
+    from app.crawler.auth import CrawlAuth
 
 
 @dataclass
@@ -21,12 +25,25 @@ class FetchResponse:
 
 
 class HttpClient:
-    def __init__(self, user_agent: str, timeout: float, max_redirects: int) -> None:
+    """Read-only HTTP client. Intentionally exposes only GET and HEAD."""
+
+    def __init__(
+        self,
+        user_agent: str,
+        timeout: float,
+        max_redirects: int,
+        auth: CrawlAuth | None = None,
+    ) -> None:
         self.timeout = timeout
         self.max_redirects = max_redirects
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": user_agent})
+        if auth and auth.configured:
+            # Cookie / auth headers for this in-memory session only.
+            self.session.headers.update(auth.http_headers())
         self.session.max_redirects = max_redirects
+        # Defense: never allow callers to POST via this session accidentally.
+        self._read_only = True
 
     def get(self, url: str, *, stream: bool = False) -> FetchResponse:
         try:

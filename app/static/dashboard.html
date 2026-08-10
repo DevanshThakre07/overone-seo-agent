@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SEO Agent Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #ece7df;
+      --ink: #141311;
+      --muted: #5f5a52;
+      --line: #cfc6b8;
+      --panel: #fffaf3;
+      --accent: #0d5c45;
+      --accent-soft: #d7ebe3;
+      --warn: #8b3a1a;
+      --blank: #8a8378;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(165deg, #e4ddd1 0%, transparent 42%),
+        radial-gradient(circle at 90% 10%, #d9e8e1 0%, transparent 35%),
+        var(--bg);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    header {
+      display: grid;
+      gap: 0.35rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.25rem;
+    }
+    header .brand {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+    }
+    header p { margin: 0; color: var(--muted); max-width: 40rem; }
+    form.controls {
+      display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: end;
+      margin-bottom: 1.25rem;
+    }
+    label { display: grid; gap: 0.3rem; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    input, select {
+      min-width: min(100%, 18rem);
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      font: inherit;
+      color: var(--ink);
+    }
+    button {
+      padding: 0.65rem 1.1rem;
+      border: 0;
+      background: var(--accent);
+      color: #f4fffa;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    .tools {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+      margin-bottom: 1.25rem;
+    }
+    .chip {
+      font-size: 0.75rem;
+      padding: 0.28rem 0.55rem;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+    }
+    .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .chip.off { opacity: 0.7; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 0.85rem;
+    }
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+    @media (max-width: 860px) {
+      .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
+    }
+    section.panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 1rem 1.1rem 1.15rem;
+      min-height: 7.5rem;
+    }
+    section.panel h2 {
+      margin: 0 0 0.7rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .score {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 3.2rem;
+      line-height: 1;
+    }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    .blank {
+      color: var(--blank);
+      font-size: 0.9rem;
+      font-style: italic;
+      margin: 0;
+    }
+    ul { margin: 0; padding-left: 1.1rem; }
+    li { margin: 0.3rem 0; font-size: 0.92rem; }
+    code { font-size: 0.84em; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 0.35rem 0.25rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .chart {
+      display: flex; align-items: end; gap: 0.35rem;
+      height: 110px; margin-top: 0.4rem;
+    }
+    .bar {
+      flex: 1; background: var(--accent); min-width: 8px; position: relative; opacity: 0.88;
+    }
+    .bar span {
+      position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+      font-size: 0.65rem; color: var(--muted); white-space: nowrap;
+    }
+    .err { color: var(--warn); margin: 0.75rem 0; }
+    .sev strong { font-weight: 650; }
+    .warn-line { color: var(--warn); font-size: 0.92rem; margin: 0.35rem 0 0.6rem; }
+    .ok-line { color: var(--accent); font-size: 0.9rem; margin: 0.35rem 0 0.6rem; }
+    section.panel.collapsed-opt {
+      opacity: 0.72;
+      min-height: 0;
+    }
+    section.panel.collapsed-opt .opt-toggle {
+      margin: 0;
+      background: none;
+      border: 0;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+    }
+    .audit-opts {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 1rem 1.1rem 1.15rem;
+      margin: -0.35rem 0 1.25rem;
+    }
+    .audit-opts > h2 {
+      margin: 0 0 0.85rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .audit-opts .opt-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 0.85rem;
+      align-items: end;
+      margin-bottom: 0.85rem;
+    }
+    .audit-opts .opt-grid label input,
+    .audit-opts .opt-grid label select,
+    .audit-opts .opt-grid label textarea {
+      min-width: 0;
+      width: 100%;
+    }
+    .audit-opts .check-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem 1.1rem;
+      margin-bottom: 0.85rem;
+    }
+    .audit-opts .check {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 0.9rem;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .audit-opts .check input { min-width: 0; width: auto; }
+    .audit-opts .hint {
+      margin: 0 0 0.75rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .audit-opts details {
+      border-top: 1px solid var(--line);
+      padding-top: 0.75rem;
+    }
+    .audit-opts details summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.65rem;
+    }
+    .audit-opts textarea {
+      min-height: 4.5rem;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--line);
+      background: #fff;
+      font: inherit;
+      color: var(--ink);
+      resize: vertical;
+    }
+    .w-sm { width: 6.5rem; }
+    .w-md { width: 12rem; }
+    .w-lg { width: min(100%, 22rem); }
+    .w-full { width: 100%; flex: 1 1 100%; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">SEO Agent</div>
+      <p>Full toolkit view for one site. Sections stay blank when data or APIs are unavailable — nothing is invented.</p>
+    </header>
+
+    <form class="controls" id="loadForm">
+      <label>Site URL
+        <input id="url" type="url" required placeholder="https://example.com/" />
+      </label>
+      <label>Google account_id (optional)
+        <input id="gsc" type="text" placeholder="e.g. demo" />
+      </label>
+      <label>GA4 property (optional)
+        <select id="ga4">
+          <option value="">— load account to list —</option>
+        </select>
+      </label>
+      <button type="button" class="secondary" id="saveGa4" title="Save as default for this account">Save GA4 default</button>
+      <button type="submit" id="go">Load dashboard</button>
+      <button type="button" id="runAudit" title="POST /audit then reload">Run audit</button>
+      <button type="button" class="secondary" id="runOptimize" title="POST /optimize — LLM rewrite advice">Get optimize advice</button>
+    </form>
+
+    <div class="audit-opts" id="auditOpts">
+      <h2>Audit options</h2>
+      <p class="hint">Maps 1:1 to <code>POST /audit</code>. Paid SERP/backlinks and LLM optimize are opt-in. Auth credentials stay in memory for that request only.</p>
+
+      <div class="opt-grid">
+        <label class="w-sm">Max pages
+          <input id="maxPages" type="number" min="1" max="200" value="1" />
+        </label>
+        <label class="w-sm">Max depth
+          <input id="maxDepth" type="number" min="0" max="10" placeholder="default" />
+        </label>
+        <label class="w-sm">Optimize max pages
+          <input id="optimizeMaxPages" type="number" min="1" max="20" placeholder="default" />
+        </label>
+        <label class="w-md">PageSpeed
+          <select id="pagespeedMode">
+            <option value="false" selected>Off (faster)</option>
+            <option value="true">On (slow)</option>
+            <option value="auto">Auto if API key set</option>
+          </select>
+        </label>
+        <label class="w-lg">Target keywords
+          <input id="optKeywords" type="text" placeholder="actoro, ai actor booking" />
+        </label>
+      </div>
+
+      <div class="check-row">
+        <label class="check" title="Persist audit to storage"><input id="saveAudit" type="checkbox" checked /> Save</label>
+        <label class="check" title="Diff vs previous saved audit"><input id="compareAudit" type="checkbox" /> Compare</label>
+        <label class="check" title="Needs Google account_id + GA4 property/preference"><input id="includeGa4" type="checkbox" checked /> Include GA4</label>
+        <label class="check" title="Needs OPENAI_API_KEY; stores rewrite advice on the audit"><input id="includeOptimize" type="checkbox" /> Optimize advice</label>
+        <label class="check" title="Paid DataForSEO — needs target keywords"><input id="includeSerp" type="checkbox" /> Include SERP / rank</label>
+        <label class="check" title="Paid DataForSEO backlink snapshot"><input id="includeBacklinks" type="checkbox" /> Include backlinks</label>
+        <label class="check" title="Queue job and poll GET /jobs/{id}"><input id="backgroundAudit" type="checkbox" /> Run in background</label>
+        <label class="check" title="Use cookie/headers below for crawl"><input id="useAuthCrawl" type="checkbox" /> Authenticated crawl</label>
+      </div>
+
+      <details id="authDetails">
+        <summary>Authenticated crawl (cookie / headers)</summary>
+        <div class="opt-grid">
+          <label class="w-full">Cookie header value
+            <input id="authCookie" type="text" placeholder="session=…; other=…" autocomplete="off" />
+          </label>
+          <label class="w-full">Extra headers (JSON object)
+            <textarea id="authHeaders" placeholder='{"Authorization":"Bearer …"}'></textarea>
+          </label>
+        </div>
+      </details>
+    </div>
+
+    <div id="tools" class="tools" hidden></div>
+    <p id="status" class="muted"></p>
+    <p id="error" class="err" hidden></p>
+    <p id="auditResult" class="muted" hidden></p>
+
+    <div id="content" class="grid" hidden></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    if (params.get("url")) document.getElementById("url").value = params.get("url");
+    if (params.get("gsc_account_id")) document.getElementById("gsc").value = params.get("gsc_account_id");
+    const initialGa4 = params.get("ga4_property_id") || "";
+
+    async function loadGa4Options(preferred) {
+      const gsc = document.getElementById("gsc").value.trim();
+      const sel = document.getElementById("ga4");
+      if (!gsc) {
+        sel.innerHTML = '<option value="">— enter account_id first —</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Loading properties…</option>';
+      try {
+        const res = await fetch("/ga4/properties?account_id=" + encodeURIComponent(gsc));
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+        const props = data.properties || [];
+        const pref = preferred || data.preferred_ga4_property_id || initialGa4 || "";
+        sel.innerHTML = '<option value="">— pick a property —</option>';
+        props.forEach((p) => {
+          const id = String(p.property_id || "");
+          const opt = document.createElement("option");
+          opt.value = id;
+          opt.textContent = (p.display_name || id) + " (" + id + ")";
+          if (id && id === String(pref)) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        if (pref && !sel.value) sel.value = pref;
+      } catch (ex) {
+        sel.innerHTML = '<option value="">— could not load properties —</option>';
+        document.getElementById("status").textContent = String(ex.message || ex);
+      }
+    }
+
+    document.getElementById("gsc").addEventListener("change", () => loadGa4Options());
+    document.getElementById("gsc").addEventListener("blur", () => loadGa4Options());
+    if (params.get("gsc_account_id")) loadGa4Options(initialGa4);
+
+    document.getElementById("saveGa4").addEventListener("click", async () => {
+      const gsc = document.getElementById("gsc").value.trim();
+      const ga4 = document.getElementById("ga4").value.trim();
+      const err = document.getElementById("error");
+      err.hidden = true;
+      if (!gsc) {
+        err.hidden = false;
+        err.textContent = "Enter Google account_id first.";
+        return;
+      }
+      if (!ga4) {
+        err.hidden = false;
+        err.textContent = "Pick a GA4 property from the list first.";
+        return;
+      }
+      document.getElementById("status").textContent = "Saving GA4 default…";
+      try {
+        const res = await fetch("/ga4/preference", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ account_id: gsc, property_id: ga4 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+        document.getElementById("status").textContent = data.message || "Saved.";
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        document.getElementById("status").textContent = "";
+      }
+    });
+
+    function loadDashboard() {
+      document.getElementById("loadForm").requestSubmit();
+    }
+
+    function parseKeywords() {
+      return document.getElementById("optKeywords").value
+        .split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+    }
+
+    function parseAuthHeaders() {
+      const raw = document.getElementById("authHeaders").value.trim();
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Auth headers must be a JSON object, e.g. {\"Authorization\":\"Bearer …\"}");
+      }
+      const out = {};
+      Object.entries(parsed).forEach(([k, v]) => { out[String(k)] = String(v); });
+      return out;
+    }
+
+    function buildAuditBody() {
+      const url = document.getElementById("url").value.trim();
+      const gsc = document.getElementById("gsc").value.trim();
+      const ga4 = document.getElementById("ga4").value.trim();
+      const maxPagesRaw = document.getElementById("maxPages").value;
+      const maxDepthRaw = document.getElementById("maxDepth").value;
+      const optMaxRaw = document.getElementById("optimizeMaxPages").value;
+      const pagespeedMode = document.getElementById("pagespeedMode").value;
+      const includeGa4 = document.getElementById("includeGa4").checked;
+      const includeOptimize = document.getElementById("includeOptimize").checked;
+      const includeSerp = document.getElementById("includeSerp").checked;
+      const includeBacklinks = document.getElementById("includeBacklinks").checked;
+      const useAuth = document.getElementById("useAuthCrawl").checked;
+      const keywords = parseKeywords();
+      if (!url) throw new Error("Enter a site URL first.");
+      if (includeGa4 && !gsc) {
+        throw new Error("Include GA4 needs Google account_id (and a saved/selected property).");
+      }
+      if (includeSerp && !keywords.length) {
+        throw new Error("Include SERP / rank needs target keywords.");
+      }
+      if (useAuth) {
+        const cookie = document.getElementById("authCookie").value.trim();
+        const headersRaw = document.getElementById("authHeaders").value.trim();
+        if (!cookie && !headersRaw) {
+          throw new Error("Authenticated crawl needs a cookie and/or headers JSON.");
+        }
+      }
+      const body = {
+        url,
+        save: document.getElementById("saveAudit").checked,
+        compare: document.getElementById("compareAudit").checked,
+        optimize: includeOptimize,
+        background: document.getElementById("backgroundAudit").checked,
+        include_ga4: includeGa4,
+        include_serp: includeSerp,
+        include_backlinks: includeBacklinks,
+        use_authenticated_crawl: useAuth,
+        target_keywords: keywords,
+      };
+      if (maxPagesRaw !== "") {
+        body.max_pages = Math.max(1, Math.min(200, Number(maxPagesRaw) || 1));
+      }
+      if (maxDepthRaw !== "") {
+        body.max_depth = Math.max(0, Math.min(10, Number(maxDepthRaw) || 0));
+      }
+      if (optMaxRaw !== "") {
+        body.optimize_max_pages = Math.max(1, Math.min(20, Number(optMaxRaw) || 1));
+      }
+      if (pagespeedMode === "true") body.pagespeed = true;
+      else if (pagespeedMode === "false") body.pagespeed = false;
+      else body.pagespeed = null;
+      if (gsc) body.gsc_account_id = gsc;
+      if (includeGa4 && ga4) body.ga4_property_id = ga4;
+      if (useAuth) {
+        const cookie = document.getElementById("authCookie").value.trim();
+        if (cookie) body.auth_cookie = cookie;
+        body.auth_headers = parseAuthHeaders();
+      }
+      return body;
+    }
+
+    async function pollJob(jobId, statusEl) {
+      const started = Date.now();
+      while (Date.now() - started < 10 * 60 * 1000) {
+        statusEl.textContent = "Background job " + jobId + " — polling…";
+        await new Promise((r) => setTimeout(r, 2000));
+        const res = await fetch("/jobs/" + encodeURIComponent(jobId));
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+        if (data.status === "failed" || data.status === "error") {
+          throw new Error(data.error || "Background audit failed");
+        }
+        if (data.status === "completed" || data.status === "done") {
+          return data.result || {};
+        }
+      }
+      throw new Error("Timed out waiting for background job " + jobId);
+    }
+
+    document.getElementById("runAudit").addEventListener("click", async () => {
+      const gsc = document.getElementById("gsc").value.trim();
+      const ga4 = document.getElementById("ga4").value.trim();
+      const err = document.getElementById("error");
+      const status = document.getElementById("status");
+      const result = document.getElementById("auditResult");
+      const btn = document.getElementById("runAudit");
+      err.hidden = true;
+      result.hidden = true;
+      let body;
+      try {
+        body = buildAuditBody();
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        return;
+      }
+      btn.disabled = true;
+      const bits = [];
+      if (body.optimize) bits.push("optimize");
+      if (body.pagespeed) bits.push("PageSpeed");
+      if (body.include_serp) bits.push("SERP");
+      if (body.include_backlinks) bits.push("backlinks");
+      if (body.include_ga4) bits.push("GA4");
+      if (body.background) bits.push("background");
+      status.textContent = bits.length
+        ? "Running audit (" + bits.join(" + ") + ")…"
+        : "Running audit…";
+      try {
+        const res = await fetch("/audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); }
+        catch { throw new Error(text.slice(0, 300) || ("HTTP " + res.status)); }
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+
+        if (data.job_id && (data.status === "accepted" || body.background)) {
+          data = Object.assign({ audit_id: "" }, await pollJob(data.job_id, status));
+        }
+
+        const id = data.audit_id || "";
+        const score = data.score;
+        const pdf = id ? ("/report/" + id + "?format=pdf") : "";
+        result.hidden = false;
+        result.innerHTML =
+          (body.save === false ? "Audit finished (not saved)" : "Audit saved") +
+          (id ? " · id <code>" + esc(id) + "</code>" : "") +
+          (score != null ? " · score <strong>" + esc(score) + "</strong>" : "") +
+          (pdf ? ' · <a href="' + esc(pdf) + '">Download PDF</a>' : "");
+        const qs = new URLSearchParams({ url: body.url });
+        if (gsc) qs.set("gsc_account_id", gsc);
+        if (ga4) qs.set("ga4_property_id", ga4);
+        history.replaceState(null, "", "?" + qs.toString());
+        if (body.save === false) {
+          status.textContent = "Done (save was off — dashboard may still show the previous audit).";
+        } else {
+          status.textContent = "Reloading dashboard…";
+          loadDashboard();
+        }
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        status.textContent = "";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("useAuthCrawl").addEventListener("change", (e) => {
+      const details = document.getElementById("authDetails");
+      if (e.target.checked) details.open = true;
+    });
+
+    document.getElementById("runOptimize").addEventListener("click", async () => {
+      const url = document.getElementById("url").value.trim();
+      const keywords = parseKeywords();
+      const err = document.getElementById("error");
+      const status = document.getElementById("status");
+      const btn = document.getElementById("runOptimize");
+      err.hidden = true;
+      if (!url) {
+        err.hidden = false;
+        err.textContent = "Enter a site URL first.";
+        return;
+      }
+      btn.disabled = true;
+      status.textContent = "Generating optimize advice (LLM)…";
+      try {
+        const res = await fetch("/optimize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url,
+            target_keywords: keywords,
+          }),
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); }
+        catch { throw new Error(text.slice(0, 300) || ("HTTP " + res.status)); }
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+        const pages = data.pages && data.pages.length
+          ? data.pages
+          : (data.page ? [data.page] : []);
+        const payload = {
+          status: data.status || "ok",
+          message: data.message || "",
+          target_keywords: data.target_keywords || keywords,
+          page_count: pages.length,
+          pages: pages.map((p) => ({
+            url: p.url,
+            improved_title: p.improved_title,
+            improved_meta_description: p.improved_meta_description,
+            improved_h1: p.improved_h1,
+            heading_suggestions: p.heading_suggestions || [],
+            keyword_suggestions: p.keyword_suggestions || [],
+            notes: p.notes || [],
+          })),
+          source: "live_optimize",
+        };
+        paintOptimizationSection(payload);
+        status.textContent = "Optimize advice ready (not saved on audit — use “Include optimize in audit” to persist).";
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        status.textContent = "";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    function paintOptimizationSection(data) {
+      const content = document.getElementById("content");
+      content.hidden = false;
+      let panel = document.getElementById("sec-optimization");
+      if (!panel) {
+        panel = document.createElement("section");
+        panel.className = "panel span-6";
+        panel.id = "sec-optimization";
+        panel.innerHTML = "<h2>Optimize advice</h2><div class=\"body\"></div>";
+        content.prepend(panel);
+      }
+      panel.classList.remove("collapsed-opt");
+      panel.hidden = false;
+      const body = panel.querySelector(".body") || panel;
+      renderOptimize(body, data);
+    }
+
+    // Opt-in / secondary panels — collapse when blank so the first viewport stays useful.
+    const COLLAPSE_WHEN_BLANK = new Set([
+      "keywords", "serp", "rank", "rank_history", "backlinks", "optimization", "keyword_plan",
+      "schedules", "compare",
+    ]);
+
+    const SECTIONS = [
+      ["audit", "Site audit", "span-4", renderAudit],
+      ["pagespeed", "PageSpeed / CWV", "span-4", renderPagespeed],
+      ["google_search_console", "Google Search Console", "span-4", renderGsc],
+      ["google_analytics", "Google Analytics (GA4)", "span-4", renderGa4],
+      ["trends", "Score trends", "span-6", renderTrends],
+      ["history", "Audit history", "span-6", renderHistory],
+      ["top_issues", "Top issues", "span-6", renderIssues],
+      ["recommendations", "Recommendations", "span-6", renderRecs],
+      ["keywords", "Keyword research", "span-4", renderKeywords],
+      ["serp", "SERP", "span-4", renderSerp],
+      ["rank", "Rank check", "span-4", renderRank],
+      ["rank_history", "Rank history", "span-6", renderRankHistory],
+      ["backlinks", "Backlinks", "span-6", renderBacklinks],
+      ["optimization", "Optimize advice", "span-6", renderOptimize],
+      ["keyword_plan", "Keyword placement", "span-3", renderSimple],
+      ["login_wall", "Login wall", "span-3", renderJsonish],
+      ["crawl_auth", "Auth crawl", "span-3", renderJsonish],
+      ["rendering", "Rendering", "span-6", renderJsonish],
+      ["analyzers", "Analyzers", "span-6", renderAnalyzers],
+      ["schedules", "Schedules", "span-6", renderSchedules],
+      ["share", "Report / share", "span-3", renderShare],
+      ["compare", "Compare audits", "span-3", renderCompare],
+    ];
+
+    document.getElementById("loadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const url = document.getElementById("url").value.trim();
+      const gsc = document.getElementById("gsc").value.trim();
+      const ga4 = document.getElementById("ga4").value.trim();
+      const go = document.getElementById("go");
+      const err = document.getElementById("error");
+      err.hidden = true;
+      go.disabled = true;
+      document.getElementById("status").textContent = "Loading…";
+      try {
+        let path = "/dashboard?url=" + encodeURIComponent(url) + "&trend_limit=16";
+        if (gsc) path += "&gsc_account_id=" + encodeURIComponent(gsc);
+        if (ga4) path += "&ga4_property_id=" + encodeURIComponent(ga4);
+        const res = await fetch(path);
+        const text = await res.text();
+        if (!res.ok) throw new Error(text.slice(0, 300) || ("HTTP " + res.status));
+        let data;
+        try { data = JSON.parse(text); }
+        catch { throw new Error("Dashboard API did not return JSON. Restart seo-api."); }
+        renderAll(normalizePayload(data));
+        const qs = new URLSearchParams({ url });
+        if (gsc) qs.set("gsc_account_id", gsc);
+        if (ga4) qs.set("ga4_property_id", ga4);
+        history.replaceState(null, "", "?" + qs.toString());
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        document.getElementById("content").hidden = true;
+      } finally {
+        go.disabled = false;
+        document.getElementById("status").textContent = "";
+      }
+    });
+
+    function normalizePayload(raw) {
+      // New API already wraps sections as { available, data, reason }.
+      if (raw && raw.audit && typeof raw.audit.available === "boolean") return raw;
+
+      // Old / partial API shape — lift fields into the new wrapper format.
+      const wrap = (v, blankReason) => {
+        if (v == null) return { available: false, data: null, reason: blankReason };
+        if (typeof v === "object" && v.status && ["skipped","unavailable","error","blank"].includes(v.status) && !v.latest && !v.points && !v.organic) {
+          return { available: false, data: null, reason: v.message || v.status };
+        }
+        return { available: true, data: v, reason: "" };
+      };
+      const latest = raw.latest || null;
+      return {
+        status: raw.status || (latest ? "ok" : "empty"),
+        url: raw.url,
+        message: raw.message || "",
+        tools: raw.tools || [],
+        audit: wrap(latest, "No saved audit"),
+        pagespeed: wrap(raw.pagespeed, "No PageSpeed on latest audit"),
+        google_search_console: wrap(raw.google_search_console, "No GSC data"),
+        google_analytics: wrap(raw.google_analytics, "No GA4 data"),
+        trends: wrap(raw.trends && (raw.trends.count || raw.trends.points) ? raw.trends : null, "No trends"),
+        history: wrap(raw.history, "No history"),
+        top_issues: wrap(raw.top_issues, "No issues"),
+        recommendations: wrap(
+          raw.recommendations || (raw.opportunities ? { opportunities: raw.opportunities, count: raw.opportunities.length } : null),
+          "No recommendations"
+        ),
+        keywords: wrap(raw.keywords || raw.keyword_research, "No keyword research"),
+        serp: wrap(raw.serp, "No SERP data"),
+        rank: wrap(raw.rank, "No rank data"),
+        rank_history: wrap(raw.rank_history, "No rank history"),
+        backlinks: wrap(raw.backlinks, "No backlinks"),
+        optimization: wrap(raw.optimization, "No optimize run"),
+        keyword_plan: wrap(raw.keyword_plan, "On-demand tool"),
+        login_wall: wrap(raw.login_wall, "No login-wall data"),
+        crawl_auth: wrap(raw.crawl_auth, "No auth crawl data"),
+        rendering: wrap(raw.rendering, "No rendering data"),
+        analyzers: wrap(raw.analyzers, "No analyzers"),
+        schedules: wrap(raw.schedules, "No schedules"),
+        share: wrap(raw.share || (latest && latest.audit_id ? {
+          audit_id: latest.audit_id,
+          create: "POST /report/" + latest.audit_id + "/share",
+          hint: "Create a public share link"
+        } : null), "Save an audit first"),
+        compare: wrap(raw.compare, "Need 2+ audits"),
+        latest,
+        opportunities: raw.opportunities || [],
+      };
+    }
+
+    function renderAll(data) {
+      const tools = document.getElementById("tools");
+      tools.hidden = false;
+      tools.innerHTML = "";
+      (data.tools || []).forEach((t) => {
+        const el = document.createElement("span");
+        el.className = "chip " + (t.has_data ? "on" : t.configured ? "" : "off");
+        el.textContent = t.label + (t.has_data ? "" : t.configured ? "" : " · not configured");
+        tools.appendChild(el);
+      });
+
+      const root = document.getElementById("content");
+      root.hidden = false;
+      root.innerHTML = "";
+      if (data.status === "empty") {
+        const note = document.createElement("section");
+        note.className = "panel span-12";
+        note.innerHTML = `<h2>Status</h2><p class="blank">${esc(data.message || "No saved audits")}</p>`;
+        root.appendChild(note);
+      }
+
+      SECTIONS.forEach(([key, title, span, fn]) => {
+        const section = document.createElement("section");
+        section.id = "sec-" + key;
+        section.className = "panel " + span;
+        section.innerHTML = `<h2>${title}</h2>`;
+        const body = document.createElement("div");
+        body.className = "body";
+        const block = data[key] || { status: "blank", available: false, reason: "No data" };
+        if (!block.available) {
+          if (COLLAPSE_WHEN_BLANK.has(key)) {
+            section.classList.add("collapsed-opt", "span-3");
+            section.classList.remove("span-4", "span-6");
+            body.innerHTML = `<button type="button" class="opt-toggle">Not run — ${esc(block.reason || "opt-in on audit")}</button>`;
+            body.querySelector(".opt-toggle").addEventListener("click", () => {
+              body.innerHTML = `<p class="blank">${esc(block.reason || "Blank")}</p>`;
+              section.classList.remove("collapsed-opt");
+              section.className = "panel " + span;
+            });
+          } else {
+            body.innerHTML = `<p class="blank">${esc(block.reason || "Blank")}</p>`;
+          }
+        } else {
+          fn(body, block.data, data);
+        }
+        section.appendChild(body);
+        root.appendChild(section);
+      });
+    }
+
+    function renderAudit(el, d) {
+      el.innerHTML = `
+        <div class="score">${esc(d.score)}</div>
+        <p class="muted">${esc(d.pages)} pages · ${esc(d.issues)} issues · ${esc(d.created_at || "")}</p>
+        <p class="sev muted">
+          <strong>${esc((d.severity||{}).critical||0)}</strong> critical ·
+          <strong>${esc((d.severity||{}).warning||0)}</strong> warning ·
+          <strong>${esc((d.severity||{}).info||0)}</strong> info
+        </p>
+        <p class="muted"><code>${esc(d.audit_id||"")}</code></p>`;
+    }
+
+    function renderPagespeed(el, d) {
+      const lab = (d.strategies && d.strategies[0] && d.strategies[0].lab) || d.lab || {};
+      const strat = (d.strategies && d.strategies[0] && d.strategies[0].strategy) || d.strategy || "";
+      el.innerHTML = `
+        <p><strong>${esc(lab.performance_score ?? "—")}</strong> / 100 ${strat ? "· " + esc(strat) : ""}</p>
+        <p class="muted">LCP ${esc(lab.lcp_ms ?? "—")}ms · CLS ${esc(lab.cls ?? "—")} · INP ${esc(lab.inp_ms ?? "—")}ms</p>
+        <p class="muted">Status: ${esc(d.status || "ok")}</p>`;
+    }
+
+    function renderGsc(el, d) {
+      const sites = d.sites || [];
+      const matchLine = d.matches_audit_url
+        ? `<p class="ok-line">Matches this site: <code>${esc(d.matched_site_url || "")}</code></p>`
+        : (d.seed_url || d.message)
+          ? `<p class="warn-line">${esc(d.message || ("No Search Console property matches " + (d.seed_url || "this URL")))}</p>`
+          : "";
+      if (sites.length || d.matches_audit_url === false) {
+        const snap = d.snapshot || {};
+        const opps = snap.opportunity_count ?? (snap.opportunities || []).length;
+        const oppLine = d.matches_audit_url && opps != null
+          ? `<p>${esc(opps)} opportunities · top query: ${esc(((snap.top_queries||[{}])[0]||{}).query || "—")}</p>`
+          : "";
+        el.innerHTML = `
+          <p class="muted">${esc(d.email || d.account_id || "")} · ${esc(d.site_count || sites.length || 0)} verified properties</p>
+          ${matchLine}
+          ${oppLine}
+          <ul>${sites.slice(0,8).map(s => `<li><code>${esc(s.site_url || s)}</code></li>`).join("")}</ul>
+          ${!d.matches_audit_url ? `<p class="muted">GSC data for this audit stays empty until the site is verified in Search Console.</p>` : ""}`;
+        return;
+      }
+      const snap = d.snapshot || {};
+      el.innerHTML = `
+        ${matchLine}
+        <p class="muted">${esc(d.matched_site_url || d.status || "")}</p>
+        <p>${esc(snap.opportunity_count ?? (snap.opportunities||[]).length)} opportunities</p>
+        <p class="muted">Top query: ${esc(((snap.top_queries||[{}])[0]||{}).query || "—")}</p>`;
+    }
+
+    function renderGa4(el, d) {
+      const snap = d.snapshot || (d.totals ? d : null);
+      if (snap && (d.property_id || snap.property_id)) {
+        const totals = snap.totals || {};
+        const prefNote = d.used_saved_preference
+          ? " · using saved default"
+          : (d.preferred_ga4_property_id ? " · default saved" : "");
+        el.innerHTML = `
+          <p class="muted">Property <code>${esc(d.property_id || snap.property_id || "")}</code>${esc(prefNote)}</p>
+          <p><strong>${esc(totals.sessions ?? 0)}</strong> sessions ·
+             <strong>${esc(totals.total_users ?? 0)}</strong> users ·
+             <strong>${esc(totals.screen_page_views ?? 0)}</strong> views</p>
+          <p class="muted">${esc(snap.message || (d.has_data === false ? "No traffic in range" : ""))}</p>
+          <ul>${(snap.top_pages||[]).slice(0,5).map(p =>
+            `<li><code>${esc(p.page_path||"")}</code> · ${esc(p.screen_page_views??0)} views</li>`
+          ).join("")}</ul>`;
+        if (d.properties && d.properties.length) {
+          const pref = d.preferred_ga4_property_id || d.property_id;
+          loadGa4Options(pref);
+        }
+        return;
+      }
+      if (d.properties) {
+        el.innerHTML = `<p class="muted">${esc(d.email || d.account_id || "")} · ${esc(d.property_count||0)} GA4 properties</p>
+          <p class="muted">${esc(d.hint || "Pick a property above and Save GA4 default")}</p>
+          <ul>${(d.properties||[]).slice(0,8).map(p =>
+            `<li><code>${esc(p.property_id)}</code> ${esc(p.display_name||"")}</li>`
+          ).join("")}</ul>`;
+        loadGa4Options(d.preferred_ga4_property_id);
+        return;
+      }
+      el.innerHTML = `<p class="blank">No GA4 data</p>`;
+    }
+
+    function renderTrends(el, d) {
+      const points = d.points || [];
+      const chart = document.createElement("div");
+      chart.className = "chart";
+      const max = Math.max(...points.map(p => Number(p.score)||0), 1);
+      points.forEach(p => {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.height = Math.max(4, Math.round((Number(p.score)/max)*100)) + "px";
+        const span = document.createElement("span");
+        span.textContent = String(Math.round(Number(p.score)));
+        bar.appendChild(span);
+        chart.appendChild(bar);
+      });
+      el.appendChild(chart);
+      const meta = document.createElement("p");
+      meta.className = "muted";
+      meta.textContent = d.score_delta == null ? (d.message || "") : `Delta: ${d.score_delta > 0 ? "+" : ""}${d.score_delta}`;
+      el.appendChild(meta);
+    }
+
+    function renderHistory(el, d) {
+      const rows = Array.isArray(d) ? d : [];
+      el.innerHTML = `<table><thead><tr><th>When</th><th>Score</th><th>Issues</th></tr></thead><tbody>
+        ${rows.slice(0,12).map(r => `<tr><td>${esc(r.created_at||"")}</td><td>${esc(r.score)}</td><td>${esc(r.issues)}</td></tr>`).join("")}
+      </tbody></table>`;
+    }
+
+    function renderIssues(el, d) {
+      const rows = Array.isArray(d) ? d : [];
+      el.innerHTML = `<ul>${rows.slice(0,12).map(i =>
+        `<li><code>${esc(i.severity)}</code> <code>${esc(i.code)}</code> — ${esc(i.message)}</li>`
+      ).join("")}</ul>`;
+    }
+
+    function renderRecs(el, d) {
+      const opps = d.opportunities || [];
+      if (opps.length) {
+        el.innerHTML = `<ul>${opps.slice(0,12).map(o =>
+          `<li><code>${esc(o.code||"")}</code> — ${esc(o.message||"")}</li>`
+        ).join("")}</ul>`;
+        return;
+      }
+      el.innerHTML = `<p class="muted">${esc(d.count||0)} recommendation page(s)</p>`;
+    }
+
+    function renderKeywords(el, d) {
+      const metrics = d.metrics || d.research?.keywords || d.keywords || [];
+      if (!Array.isArray(metrics) || !metrics.length) {
+        el.innerHTML = `<p class="muted">${esc(d.status || d.message || "Present")}</p>`;
+        return;
+      }
+      el.innerHTML = `<table><thead><tr><th>Keyword</th><th>Vol</th><th>KD</th></tr></thead><tbody>
+        ${metrics.slice(0,8).map(k => `<tr><td>${esc(k.keyword||"")}</td><td>${esc(k.search_volume??"—")}</td><td>${esc(k.keyword_difficulty??"—")}</td></tr>`).join("")}
+      </tbody></table>`;
+    }
+
+    function renderSerp(el, d) {
+      const organic = d.organic || [];
+      if (organic.length) {
+        el.innerHTML = `<ul>${organic.slice(0,8).map(o =>
+          `<li>#${esc(o.rank_group)} <code>${esc(o.domain)}</code> — ${esc(o.title||"")}</li>`
+        ).join("")}</ul>`;
+        return;
+      }
+      const checks = d.checks || [];
+      if (checks.length) {
+        el.innerHTML = `<p class="muted">${esc(d.message||"")}</p><ul>${checks.map(c =>
+          `<li>${esc(c.keyword)} — ${(c.rank&&c.rank.found) ? "pos "+esc(c.rank.position) : "not in top"}</li>`
+        ).join("")}</ul>`;
+        return;
+      }
+      el.innerHTML = `<p class="muted">${esc(d.message || "SERP payload")}</p>`;
+    }
+
+    function renderRank(el, d) {
+      const rows = Array.isArray(d) ? d : [];
+      el.innerHTML = `<ul>${rows.map(r => {
+        const rank = r.rank || {};
+        return `<li><strong>${esc(r.keyword)}</strong> — ${rank.found ? "position "+esc(rank.position) : esc(r.message||"not found")}</li>`;
+      }).join("")}</ul>`;
+    }
+
+    function renderRankHistory(el, d) {
+      const series = d.series || {};
+      const keys = Object.keys(series);
+      if (!keys.length) {
+        el.innerHTML = `<p class="muted">${esc(d.message || "No snapshots")}</p>`;
+        return;
+      }
+      el.innerHTML = keys.slice(0, 6).map((kw) => {
+        const pts = series[kw] || [];
+        const last = pts[pts.length - 1] || {};
+        const first = pts[0] || {};
+        const delta = (last.position != null && first.position != null)
+          ? (Number(first.position) - Number(last.position))
+          : null;
+        const trail = pts.slice(-8).map((p) =>
+          p.found ? String(p.position ?? "—") : "—"
+        ).join(" → ");
+        return `<div style="margin-bottom:0.75rem;">
+          <p><strong>${esc(kw)}</strong>
+            ${delta == null ? "" : (delta > 0 ? ` · improved ${esc(delta)}` : delta < 0 ? ` · dropped ${esc(-delta)}` : " · flat")}
+          </p>
+          <p class="muted">${esc(trail)} · ${esc(pts.length)} checks</p>
+        </div>`;
+      }).join("");
+    }
+
+    function renderBacklinks(el, d) {
+      const sum = d.summary || d;
+      const refs = d.top_referring_domains || [];
+      el.innerHTML = `
+        <p><strong>${esc(sum.backlinks ?? "—")}</strong> backlinks · <strong>${esc(sum.referring_domains ?? "—")}</strong> domains</p>
+        <ul>${refs.slice(0,8).map(r => `<li><code>${esc(r.domain)}</code> — ${esc(r.backlinks)} links</li>`).join("")}</ul>`;
+    }
+
+    function renderSimple(el, d) {
+      if (typeof d === "string") { el.innerHTML = `<p class="muted">${esc(d)}</p>`; return; }
+      el.innerHTML = `<p class="muted">${esc(d.status || d.hint || JSON.stringify(d).slice(0,160))}</p>`;
+    }
+
+    function renderOptimize(el, d) {
+      const pages = d.pages || [];
+      if (!pages.length) {
+        el.innerHTML = `<p class="muted">${esc(d.status || "ok")} · ${esc(d.message || "No page advice yet")}</p>`;
+        return;
+      }
+      const kw = (d.target_keywords || []).length
+        ? `<p class="muted">Keywords: ${esc((d.target_keywords || []).join(", "))}</p>`
+        : "";
+      const src = d.source ? `<p class="muted">Source: ${esc(d.source)}</p>` : "";
+      el.innerHTML = src + kw + pages.slice(0, 3).map((p) => `
+        <div style="margin:0.75rem 0 1rem;padding-top:0.5rem;border-top:1px solid var(--line,#ddd);">
+          <p><strong>${esc(p.url || "")}</strong></p>
+          <ul>
+            <li><code>title</code> — ${esc(p.improved_title || "—")}</li>
+            <li><code>meta</code> — ${esc(p.improved_meta_description || "—")}</li>
+            <li><code>h1</code> — ${esc(p.improved_h1 || "—")}</li>
+          </ul>
+          ${(p.keyword_suggestions || []).length
+            ? `<p class="muted">Suggest: ${esc((p.keyword_suggestions || []).slice(0, 6).join(", "))}</p>`
+            : ""}
+          ${(p.notes || []).length
+            ? `<ul>${(p.notes || []).slice(0, 4).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>`
+            : ""}
+        </div>
+      `).join("");
+    }
+
+    function renderJsonish(el, d) {
+      if (!d || typeof d !== "object") { el.innerHTML = `<p class="blank">Blank</p>`; return; }
+      const keys = Object.keys(d).slice(0, 8);
+      el.innerHTML = `<ul>${keys.map(k => `<li><code>${esc(k)}</code>: ${esc(stringify(d[k]))}</li>`).join("")}</ul>`;
+    }
+
+    function renderAnalyzers(el, d) {
+      const results = d.results || [];
+      el.innerHTML = `<ul>${results.map(r =>
+        `<li><code>${esc(r.analyzer)}</code> — ${esc(r.issue_count)} issues${r.error ? " · err" : ""}</li>`
+      ).join("")}</ul>`;
+    }
+
+    function renderSchedules(el, d) {
+      const rows = Array.isArray(d) ? d : [];
+      el.innerHTML = `<ul>${rows.map(s =>
+        `<li>every ${esc(s.every_hours)}h · next ${esc(s.next_run_at||"—")} · ${s.enabled ? "on" : "off"}</li>`
+      ).join("")}</ul>`;
+    }
+
+    function renderShare(el, d) {
+      const pdfRaw = d.pdf || (d.audit_id ? ("/report/" + d.audit_id + "?format=pdf") : "");
+      const pdf = String(pdfRaw).replace(/^(GET|POST)\s+/i, "").trim();
+      el.innerHTML = `
+        <p class="muted">${esc(d.hint || "")}</p>
+        <p><code>${esc(d.create || "")}</code></p>
+        ${pdf ? `<p><a href="${esc(pdf)}">Download PDF</a></p>` : ""}
+        <p class="muted">After share: <code>/share/{token}?format=pdf</code></p>`;
+    }
+
+    function renderCompare(el, d) {
+      el.innerHTML = `<p class="muted">${esc(d.hint||"")}</p><p class="muted">History points: ${esc(d.history_count)} · ready: ${d.ready ? "yes" : "no"}</p>`;
+    }
+
+    function esc(v) {
+      return String(v ?? "").replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[c]));
+    }
+    function stringify(v) {
+      if (v == null) return "—";
+      if (typeof v === "object") return JSON.stringify(v).slice(0, 80);
+      return String(v);
+    }
+
+    if (params.get("url")) document.getElementById("loadForm").requestSubmit();
+  </script>
+</body>
+</html>

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.config.settings import get_settings
-from app.repositories.sqlite_audit_repository import SqliteAuditRepository
+from app.repositories.factory import get_audit_repository
 from app.services.memory_service import MemoryService
 from app.utils.url import normalize_url
 
@@ -26,7 +26,7 @@ class HistoryResult(BaseModel):
 def list_history(url: str, *, limit: int = 20) -> HistoryResult:
     """Hermes-ready tool: list previous audits for a URL."""
     settings = get_settings()
-    repo = SqliteAuditRepository(settings.storage.path)
+    repo = get_audit_repository(settings)
     audits = MemoryService(repo).history(url, limit=limit)
     entries = [
         HistoryEntry(

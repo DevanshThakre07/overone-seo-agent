@@ -67,9 +67,11 @@ class TestOAuth:
         url = build_authorization_url(creds, state="abc123")
         assert "accounts.google.com" in url
         assert "access_type=offline" in url
-        assert "prompt=consent" in url
+        assert "prompt=select_account%20consent" in url or "prompt=select_account+consent" in url
         assert "state=abc123" in url
         assert "webmasters.readonly" in url
+        assert "analytics.readonly" in url
+        assert "access_type=offline" in url
 
     def test_exchange_code_stores_refresh_token(self, gsc_settings):
         creds = load_oauth_credentials(gsc_settings)
@@ -168,14 +170,23 @@ class TestSearchConsoleClient:
                         "ctr": 0.1,
                         "position": 3.0,
                     },
+                    {
+                        "keys": ["weak snippet", "https://example.com/"],
+                        "clicks": 1,
+                        "impressions": 200,
+                        "ctr": 0.005,
+                        "position": 2.0,
+                    },
                 ]
             }
 
         with patch.object(client, "search_analytics", side_effect=fake_analytics):
             snap = client.performance_snapshot("https://example.com/")
         assert snap["status"] == "ok"
-        assert snap["opportunity_count"] == 1
-        assert snap["opportunities"][0]["query"] == "active learning"
+        assert snap["opportunity_count"] == 2
+        kinds = {o["kind"] for o in snap["opportunities"]}
+        assert kinds == {"page2", "low_ctr"}
+        assert snap["opportunities"][0]["query"] in {"active learning", "weak snippet"}
         assert snap["top_queries"][0]["query"] == "active learning"
 
 
@@ -220,6 +231,11 @@ class TestServiceFlow:
         status = service.status("customer-42")
         assert status["connected"] is True
         assert status["email"] == "client@example.com"
+        assert status["oauth_publishing_status"] == "testing"
+        assert status["customer_access"] == "test_users_only"
+        prod = service.production_status()
+        assert prod["publishing_status"] == "testing"
+        assert "steps" in prod
 
     def test_audit_enrichment_skipped_without_account(self, gsc_settings):
         from app.config.settings import Settings

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 from app.config.settings import PROJECT_ROOT
@@ -31,6 +32,7 @@ class ReportService:
         out_path: Path | str | None = None,
     ) -> ReportArtifact:
         document = build_report_document(audit)
+        pdf_bytes: bytes | None = None
 
         if fmt == ReportFormat.JSON:
             content = (
@@ -38,15 +40,39 @@ class ReportService:
                 if full_audit_json
                 else render_document_json(document)
             )
+            metadata = {
+                "seed_url": audit.seed_url,
+                "score": f"{audit.score:.1f}",
+                "pages": str(len(audit.pages)),
+                "delivery": "inline_content",
+                "media_type": "application/json",
+                "content_encoding": "utf-8",
+            }
         elif fmt == ReportFormat.MARKDOWN:
-            # Use audit-aware renderer so scope/metrics/recommendations are included.
             content = render_markdown(audit)
+            metadata = {
+                "seed_url": audit.seed_url,
+                "score": f"{audit.score:.1f}",
+                "pages": str(len(audit.pages)),
+                "delivery": "inline_content",
+                "media_type": "text/markdown",
+                "content_encoding": "utf-8",
+            }
         elif fmt == ReportFormat.PDF:
             try:
-                raw = render_pdf(audit)
+                pdf_bytes = render_pdf(audit)
             except PdfNotImplementedError:
                 raise
-            content = raw.decode("latin-1")  # unreachable until PDF exists
+            content = base64.b64encode(pdf_bytes).decode("ascii")
+            metadata = {
+                "seed_url": audit.seed_url,
+                "score": f"{audit.score:.1f}",
+                "pages": str(len(audit.pages)),
+                "delivery": "inline_content",
+                "media_type": "application/pdf",
+                "content_encoding": "base64",
+                "byte_length": str(len(pdf_bytes)),
+            }
         else:
             raise ValueError(f"Unsupported report format: {fmt}")
 
@@ -55,16 +81,11 @@ class ReportService:
             format=fmt,
             content=content,
             document=document,
-            metadata={
-                "seed_url": audit.seed_url,
-                "score": f"{audit.score:.1f}",
-                "pages": str(len(audit.pages)),
-                "delivery": "inline_content",
-            },
+            metadata=metadata,
         )
 
         if out_path is not None:
-            artifact = self.write(artifact, Path(out_path))
+            artifact = self.write(artifact, Path(out_path), pdf_bytes=pdf_bytes)
 
         log_event(
             logger,
@@ -89,13 +110,33 @@ class ReportService:
             raise KeyError(f"Audit not found: {audit_id}")
         return self.generate(audit, fmt, out_path=out_path)
 
-    def write(self, artifact: ReportArtifact, path: Path) -> ReportArtifact:
+    def pdf_bytes(self, artifact: ReportArtifact) -> bytes:
+        if artifact.format != ReportFormat.PDF:
+            raise ValueError("Artifact is not a PDF")
+        if artifact.metadata.get("content_encoding") == "base64":
+            return base64.b64decode(artifact.content)
+        raise ValueError("PDF artifact missing base64 content")
+
+    def write(
+        self,
+        artifact: ReportArtifact,
+        path: Path,
+        *,
+        pdf_bytes: bytes | None = None,
+    ) -> ReportArtifact:
         path = Path(path)
         if not path.is_absolute():
             path = (PROJECT_ROOT / path).resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(artifact.content, encoding="utf-8")
-        # Prefer project-relative path in responses (portable); fall back to name.
+
+        if artifact.format == ReportFormat.PDF:
+            raw = pdf_bytes
+            if raw is None:
+                raw = self.pdf_bytes(artifact)
+            path.write_bytes(raw)
+        else:
+            path.write_text(artifact.content, encoding="utf-8")
+
         try:
             artifact.path = str(path.relative_to(PROJECT_ROOT))
         except ValueError:
@@ -103,3 +144,7 @@ class ReportService:
         artifact.metadata["delivery"] = "file_and_inline_content"
         artifact.metadata["relative_path"] = artifact.path or ""
         return artifact
+
+
+def default_pdf_out_path(audit_id: str) -> Path:
+    return PROJECT_ROOT / "data" / "reports" / f"{audit_id}.pdf"

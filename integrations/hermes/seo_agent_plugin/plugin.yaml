@@ -8,6 +8,7 @@ author: SEO-Agent
 kind: standalone
 provides_tools:
   - audit_site
+  - check_login_wall
   - check_pagespeed
   - research_keywords
   - optimize_page
@@ -16,3 +17,15 @@ provides_tools:
   - compare_audits
   - confirm_site_sources
   - list_seo_history
+  - list_seo_trends
+  - list_rank_history
+  - gsc_status
+  - gsc_sites
+  - gsc_performance
+  - ga4_status
+  - ga4_properties
+  - ga4_set_preference
+  - ga4_report
+  - check_serp
+  - check_rank
+  - check_backlinks
