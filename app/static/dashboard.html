@@ -2534,17 +2534,57 @@
 
     function renderShare(el, d) {
       const pdf = pdfHref(d.pdf || d.audit_id || "");
+      const auditId = d.audit_id || "";
       el.innerHTML = `
         ${d.hint ? `<p class="muted" style="margin-top:0">${esc(d.hint)}</p>` : ""}
         <div class="metrics" style="margin-top:0.35rem">
           <div class="metric"><div class="n">${pdf ? "PDF" : "—"}</div><div class="l">Report</div></div>
+          <div class="metric"><div class="n">${auditId ? "Yes" : "No"}</div><div class="l">Saved audit</div></div>
         </div>
         ${pdf
           ? `<p><a href="${esc(pdf)}" target="_blank" rel="noopener">Download PDF report</a></p>
-             <p class="muted">Audit <code>${esc(d.audit_id || "")}</code></p>`
-          : `<div class="blank-box"><p class="blank-title">No saved audit yet</p><p class="blank">Run audit with Save on, then download PDF here.</p></div>`}
-        ${d.create ? `<p class="muted">Share API: <code>${esc(d.create)}</code></p>` : ""}
-        <p class="muted">Public share: <code>/share/{token}?format=pdf</code></p>`;
+             <p class="muted">Audit <code>${esc(auditId)}</code></p>
+             <p style="margin-top:0.75rem">
+               <button type="button" class="ghost" id="btnCreateShare">Create client scorecard link</button>
+             </p>
+             <div id="shareLinkBox" class="blank-box" hidden style="margin-top:0.65rem"></div>`
+          : `<div class="blank-box"><p class="blank-title">No saved audit yet</p><p class="blank">Run audit with Save on, then download PDF or create a client scorecard link here.</p></div>`}
+        <p class="muted" style="margin-top:0.75rem">Client opens <code>/share/{token}</code> (scorecard). PDF via <code>?format=pdf</code>. No API key required for viewers.</p>`;
+
+      const btn = el.querySelector("#btnCreateShare");
+      if (btn && auditId) {
+        btn.addEventListener("click", async () => {
+          const box = el.querySelector("#shareLinkBox");
+          try {
+            btn.disabled = true;
+            btn.textContent = "Creating…";
+            const res = await fetch("/report/" + encodeURIComponent(auditId) + "/share", {
+              method: "POST",
+              headers: { ...apiHeaders(), "Content-Type": "application/json" },
+              body: JSON.stringify({ days_valid: 30 }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || ("HTTP " + res.status));
+            const origin = window.location.origin;
+            const htmlUrl = origin + (data.html_url || ("/share/" + data.token));
+            const pdfUrl = origin + (data.pdf_url || ("/share/" + data.token + "?format=pdf"));
+            if (box) {
+              box.hidden = false;
+              box.innerHTML = `
+                <p class="blank-title">Client scorecard ready</p>
+                <p class="blank">Send this link (no login):</p>
+                <p><a href="${esc(htmlUrl)}" target="_blank" rel="noopener">${esc(htmlUrl)}</a></p>
+                <p class="muted"><a href="${esc(pdfUrl)}" target="_blank" rel="noopener">PDF download</a> · expires ${esc(data.expires_at || "30 days")}</p>`;
+            }
+          } catch (ex) {
+            document.getElementById("error").hidden = false;
+            document.getElementById("error").textContent = String(ex.message || ex);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = "Create client scorecard link";
+          }
+        });
+      }
     }
 
     function renderCompare(el, d) {

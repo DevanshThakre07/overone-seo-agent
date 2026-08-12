@@ -387,8 +387,8 @@ Interactive docs: `/docs`. Summary:
 | GET | `/dashboard` (JSON) · `/dashboard/ui` (HTML) |
 | GET | `/trends` |
 | GET/POST/DELETE | `/schedules` (+ enabled, run-due) |
-| POST | `/report/{audit_id}/share` |
-| GET | `/share/{token}` (public; PDF optional) |
+| POST | `/report/{audit_id}/share` | Create public **client scorecard** link |
+| GET | `/share/{token}` | Scorecard HTML (default); `?format=pdf` / `markdown` |
 | GET | `/alerts/status` · POST `/alerts/test` |
 | GET | `/crawl/login-wall` |
 

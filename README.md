@@ -1,22 +1,36 @@
 # AI SEO Agent
 
-Standalone, modular SEO engine: crawl → extract → plugin analyzers → structured JSON audit.
+Standalone SEO engine: **crawl → extract → analyze → score → recommend**, with optional Google Search Console, GA4, PageSpeed, and DataForSEO enrichment.
 
-Designed to later plug into Hermes as tools and a multi-agent Growth Copilot — without coupling the core to Hermes or Telegram.
+Primary surfaces for contributors:
+
+- **Dashboard** — `http://localhost:8000/dashboard/ui`
+- **HTTP API** — OpenAPI at `/docs`
+- **CLI** — `seo-audit`, `seo-optimize`, `seo-report`, …
+
+Deep dive for contributors: **[`allinfo.md`](allinfo.md)**  
+Dashboard beginner labels: [`docs/understand.md`](docs/understand.md)  
+Hosting: [`docs/HOSTING.md`](docs/HOSTING.md)
+
+---
 
 ## Architecture
 
 ```text
-CLI / Future FastAPI / Future Hermes adapter
+Dashboard / CLI / HTTP API
         ↓
-   tools/  (audit_site, crawl_site, …)
+   tools/ + services/   (SeoService orchestration)
         ↓
-   services/  (SeoService, CrawlerService, …)
+ crawler → extractor → analyzers → score + recommendations
         ↓
- crawler / extractor / analyzers / repositories
+ SQLite or Postgres · reports (MD / PDF) · public share scorecard
 ```
 
-Each SEO check is an independent plugin under `app/analyzers/`, executed by `AnalyzerRegistry`.
+Each SEO check is a plugin under `app/analyzers/`, run by `AnalyzerRegistry`.
+
+**Optimize / recommendations are advice only** — this agent does not edit the customer’s live site.
+
+---
 
 ## Quick start
 
@@ -27,115 +41,121 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
+cp .env.example .env   # add keys locally — never commit .env
+
 seo-audit https://example.com -o out.json --max-pages 10
 # or
 python -m app.main https://example.com -o out.json --max-pages 10
 ```
 
-### Phase 2 — AI optimize
-
-Set `OPENAI_API_KEY` (OpenAI-compatible APIs also work via `LLM_BASE_URL` / `LLM_MODEL`):
-
-```bash
-cp .env.example .env   # then add your key
-
-# Single page suggestions
-seo-optimize https://example.com -o optimize.json --keywords "example domain,dns"
-
-# Audit + optimize top pages
-seo-audit https://example.com --optimize --keywords "example" --optimize-max-pages 3 -o out.json
-```
-
-Suggestions include improved title/meta/H1, headings, keywords, FAQs, schema, and internal links — grounded in extracted page facts only.
-
-### Phase 3 — Reports
-
-```bash
-# Markdown report (default)
-seo-report --url https://example.com -o report.md --max-pages 5
-
-# Structured JSON report sections
-seo-report --url https://example.com -f json -o report.json
-
-# PDF (requires: pip install 'seo-agent[pdf]')
-seo-report --audit-id <id> -f pdf -o report.pdf
-
-# From a saved audit id (requires --save on audit/report)
-seo-report --audit-id <id> -f markdown -o report.md
-```
-
-Each report includes: Summary, Critical Issues, Warnings, Suggestions, Overall SEO Score.  
-PDF download: `GET /report/{audit_id}?format=pdf` or public `GET /share/{token}?format=pdf`.
-
-### Phase 4 — Memory & compare
-
-```bash
-# Save baseline
-seo-audit https://example.com --save --max-pages 5
-
-# Later: compare against previous (auto-saves current)
-seo-audit https://example.com --compare --max-pages 5 -o audit.json
-seo-compare https://example.com -o changes.md --max-pages 5
-seo-history https://example.com
-```
-
-Audits, background jobs, schedules, and share links default to SQLite (`SEO_STORAGE_PATH`, default `data/audits.db`). Set `SEO_DATABASE_URL` or `DATABASE_URL` to use Postgres for all of them (`pip install 'seo-agent[postgres]'`). `POST /audit` with `background=true` (and due schedules) enqueue durable jobs; poll `GET /jobs/{job_id}` (`pending|running|completed|failed`).
-
-### Phase 5 — FastAPI
+### API + Dashboard
 
 ```bash
 seo-api
 # or: uvicorn app.api.app:app --reload --port 8000
 ```
 
-OpenAPI docs: http://localhost:8000/docs
+| URL | Purpose |
+|-----|---------|
+| http://localhost:8000/health | Health |
+| http://localhost:8000/docs | OpenAPI |
+| http://localhost:8000/dashboard/ui?url=https://example.com/ | Operator dashboard |
 
-### Host (FP-2) — Docker / HTTPS
+Set `SEO_API_KEY` before exposing the service. Dashboard has an API key field for Bearer / `X-API-Key`.
 
-See **[docs/HOSTING.md](docs/HOSTING.md)** for Railway / Render / Fly / VPS.
+### Docker
 
 ```bash
 docker compose up --build
-# health: http://localhost:8000/health
-# dashboard: http://localhost:8000/dashboard/ui?url=https://example.com/
+curl -sS http://127.0.0.1:8000/health
 ```
 
-Set `SEO_API_KEY` before exposing the service publicly. `seo-api` respects the `PORT` env var on hosted platforms.
+See [`docs/HOSTING.md`](docs/HOSTING.md). HTTPS deploy is optional for local/dev; park production OAuth Publish until you have a public domain.
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/health` | Health check |
-| POST | `/audit` | Run audit (`background=true` for async job) |
-| GET | `/jobs/{job_id}` | Poll background job |
-| POST | `/optimize` | AI page optimization |
-| POST | `/report` | Generate report from url or audit_id |
-| GET | `/report/{audit_id}` | Fetch saved audit report |
-| GET | `/history?url=` | List saved audits |
-| POST | `/compare` | Compare with previous audit |
+---
+
+## Common workflows
+
+### Audit + save + compare
+
+```bash
+seo-audit https://example.com --save --max-pages 15
+seo-audit https://example.com --compare --max-pages 15 -o audit.json
+seo-history https://example.com
+seo-compare https://example.com -o changes.md
+```
+
+### AI optimize (advice only)
+
+Needs `OPENAI_API_KEY` (OpenAI-compatible via `LLM_BASE_URL` / `LLM_MODEL`):
+
+```bash
+seo-optimize https://example.com -o optimize.json --keywords "example domain,dns"
+seo-audit https://example.com --optimize --keywords "example" --optimize-max-pages 3 -o out.json
+```
+
+### Reports + client scorecard share
+
+```bash
+seo-report --url https://example.com -o report.md --max-pages 5
+seo-report --audit-id <id> -f pdf -o report.pdf
+```
+
+From the dashboard **Report / share** panel (after a saved audit):
+
+1. Download PDF, or  
+2. **Create client scorecard link** → public `/share/{token}` (no API key for viewers)  
+3. PDF: `/share/{token}?format=pdf`
+
+Audits, jobs, schedules, and share links default to SQLite (`SEO_STORAGE_PATH`, default `data/audits.db`). Use `SEO_DATABASE_URL` for Postgres (`pip install 'seo-agent[postgres]'`).
+
+`POST /audit` with `background=true` enqueues a durable job; poll `GET /jobs/{job_id}`.
+
+---
 
 ## Configuration
 
 Defaults: [`config/default.yaml`](config/default.yaml)  
-Env overrides: [`.env.example`](.env.example)
+Env template: [`.env.example`](.env.example)
 
-## Status
+Never commit: `.env`, `secrets/`, `*.db`, local dumps (`out.json`, etc.).
 
-- [x] Phase 1: crawler, extractor, plugin analyzers, services, tools, CLI
-- [x] Phase 2: AI optimizer (`OptimizerService`, `seo-optimize`, `--optimize`)
-- [x] Phase 3: JSON/Markdown/PDF reports (`seo-report`; PDF via `seo-agent[pdf]`)
-- [x] Phase 4: SQLite memory, compare/history, change reports
-- [x] Phase 5: FastAPI (`seo-api`, OpenAPI at `/docs`)
-- [x] Hermes plugin adapter (in SEO-Agent only; symlink to `~/.hermes/plugins/`)
-- [ ] Telegram (via Hermes later)
+---
 
-### Hermes plugin (does not modify hermes-agent)
+## Status (high level)
 
-```bash
-./integrations/hermes/install_plugin.sh
-hermes plugins enable seo-agent
-```
+- [x] Crawler, extractor, plugin analyzers, scoring, CLI  
+- [x] AI optimize + keyword placement (advice only)  
+- [x] Markdown / JSON / PDF reports + signal trust stubs  
+- [x] Audit memory, compare, history  
+- [x] FastAPI + operator dashboard  
+- [x] GSC / GA4 Connect Google, PageSpeed, DataForSEO keywords + opt-in SERP/rank/backlinks  
+- [x] Schedules, trends, alerts engine, public **client scorecard** share  
+- [ ] Production HTTPS + OAuth Publish (owner — when you deploy)  
+- [ ] Stripe / multi-tenant SaaS packaging (later)
 
-See [integrations/hermes/README.md](integrations/hermes/README.md).
+---
+
+## API snapshot
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | Health |
+| POST | `/audit` | Run audit (`background=true` for async) |
+| GET | `/jobs/{job_id}` | Poll job |
+| POST | `/optimize` | AI page optimization advice |
+| POST | `/keyword-plan` | On-page keyword placement |
+| POST | `/report` | Generate report |
+| GET | `/report/{audit_id}` | Saved report (`?format=pdf`) |
+| POST | `/report/{audit_id}/share` | Create public scorecard link |
+| GET | `/share/{token}` | Client scorecard (HTML) / PDF / markdown |
+| GET | `/history?url=` | History |
+| POST | `/compare` | Diff vs previous |
+| GET | `/dashboard/ui` | Operator UI |
+
+Full catalog and design notes: [`allinfo.md`](allinfo.md).
+
+---
 
 ## Tests
 
@@ -143,12 +163,9 @@ See [integrations/hermes/README.md](integrations/hermes/README.md).
 pytest -q
 ```
 
-## Hermes-ready tools
+---
 
-Registered in `app/tools/registry.py`:
+## Embedding in a larger product
 
-- `audit_site`
-- `crawl_site`
-- `generate_report`
-- `optimize_page` (stub)
-- `compare_audits`
+Run `seo-api` as a service; the parent product owns users/billing/UI and calls this API with `SEO_API_KEY`.  
+The bundled dashboard is an operator console — production UX can be thinner and reuse the same endpoints. Details in `allinfo.md` §19.

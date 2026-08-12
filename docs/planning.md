@@ -7,7 +7,7 @@
 > - Companion status notes also live in `docs/GOOGLE_SEARCH_CONSOLE.md` (integrations detail).  
 > - **Two tracks:** **SEO-strong** (priority now) vs **Fast path** (sellable product — kept, starts after SEO-strong gate). Near-term / Future / Capability map stay the full roadmap.  
 > - **IDs to remember:** **S1–S4** = SEO-strong slices; **FP-1–FP-6** = Fast path slices — see **Glossary (S1 / S2 / …)** below.  
-> - Last updated: **2026-08-12** (Plan Perfect build complete except PP-5 funded + PP-H)
+> - Last updated: **2026-08-12** (FP-4 thin client scorecard; HTTPS deploy parked)
 
 ---
 
@@ -90,6 +90,7 @@ Discover → Audit → Keywords → Rank/SERP → GSC gaps → Content advice
 | 2026-08-10 | **S3 Analyzer depth** | Crawl-scoped internal link graph (orphans/hubs/dead-ends); richer schema parse + homepage Organization/WebSite + required-field checks |
 | 2026-08-10 | **FP-2 Host packaging** | Dockerfile + compose + `docs/HOSTING.md` + `PORT` env; owner still deploys to cloud |
 | 2026-08-12 | **Plan Perfect PP-0→PP-8** | Truth defaults, schedules UI, analyzer drill-down, keywords/rank UX, schema advisor, GA4 narrative, rec accuracy fixtures (`tests/fixtures/rec_accuracy` + unit tests). PP-5 anchors wait on DataForSEO funds; PP-H owner host/OAuth |
+| 2026-08-12 | **FP-4 Thin client scorecard** | Public `/share/{token}` HTML scorecard (score + top issues + rec peek + PDF); dashboard **Create client scorecard link**; README/allinfo contributor-facing |
 
 ### What “optimize” means today (explicit)
 
@@ -466,7 +467,7 @@ Pay → Connect Google → Run audit → Dashboard scorecard → Download / shar
 | FP-1 | **Report trust** | Markdown + PDF parity; clear skipped / not-run wording | ✅ = SEO-strong **S1** shipped 2026-08-10 |
 | FP-2 | **Host** | HTTPS deploy of `seo-api` + storage + secrets (owner picks host) | ✅ packaging 2026-08-10 — owner deploys |
 | FP-3 | **OAuth Production** | Google Cloud Publish + env (`GSC_OAUTH_PUBLISHING_STATUS=production`) — mostly owner | ⏸ after SEO-strong (code/docs ✅) |
-| FP-4 | **Thin client delivery** | One flow: audit → scorecard → PDF share (reuse dashboard/share; **no** Spy/Fixer/heyfixit clone) | ⏸ after SEO-strong |
+| FP-4 | **Thin client delivery** | One flow: audit → scorecard → PDF share (reuse dashboard/share; **no** Spy/Fixer/heyfixit clone) | ✅ 2026-08-12 (`/share/{token}` scorecard + dashboard create link) |
 | FP-5 | **Billing** | Stripe Checkout — one plan / per-site (or simple retainer SKU) | ⏸ after SEO-strong |
 | FP-6 | **Client isolation** | Per-client `account_id` / API key boundaries (enough to sell; not full IAM) | ⏸ after SEO-strong |
 
@@ -505,10 +506,10 @@ FP-1 Report trust (= S1) → FP-2 Host → FP-3 OAuth Publish (owner)
 
 | Status | Action |
 |--------|--------|
-| **Active stage** | **Plan Perfect** — build slices **done** (PP-0…PP-4, PP-6…PP-8); remaining = funded/owner |
-| **Now (build)** | None on Plan Perfect code path — optional polish only |
-| **Owner parallel** | **PP-5** fund DataForSEO (anchors) · **PP-H** HTTPS deploy (`DEPLOY.md`) + OAuth Publish |
-| **Still deferred** | Form login; GEO; Apply; Local; Stripe/SaaS isolation; Slack workspace |
+| **Active stage** | **Fast path FP-4** thin client delivery (localhost OK) — HTTPS / PP-H **parked** until you deploy |
+| **Now (build)** | FP-4 scorecard share ✅ — next optional: FP-6 lite isolation / polish |
+| **Owner parallel** | When ready: deploy HTTPS → OAuth redirect → Publish; fund DataForSEO (PP-5) |
+| **Still deferred** | Form login; GEO; Apply; Local; Stripe; Slack workspace |
 
 Do **not** create a Slack workspace for alerts now — leave `SEO_ALERT_WEBHOOK_URL` unset until the later channel-setup slice.
 

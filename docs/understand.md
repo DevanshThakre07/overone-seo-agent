@@ -52,7 +52,7 @@ Nothing here invents data — empty panels mean that signal was not run or is un
 | **Rendering** | Did we need JavaScript (Playwright) to see content? | SPAs often need this. |
 | **Analyzers** | Each SEO check that ran. Open a row to see exact issues (code, message, page). | Counts + drill-down. Details also appear in Top issues. |
 | **Schedules** | Auto re-audits on a timer. | Empty = none set up. |
-| **Report / share** | Download PDF or create a public link. | What you send a client. |
+| **Report / share** | Download PDF or **Create client scorecard link** (public `/share/{token}` — score + top issues; no API key for viewers). | What you send a client. |
 | **Compare audits** | Diff between two saved runs. | Needs 2+ audits. |
 
 ---
