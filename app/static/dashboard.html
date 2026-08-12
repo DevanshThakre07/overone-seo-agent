@@ -1567,9 +1567,9 @@
       ["backlinks", "Backlinks", "Spam risk & referring domains", "span-6", renderBacklinks],
       ["optimization", "Optimize advice", "Copy-ready rewrites", "span-6", renderOptimize],
       ["keyword_plan", "Keyword placement", "Where to use terms on-page", "span-6", renderKeywordPlan],
-      ["login_wall", "Login wall", "Access probe", "span-3", renderJsonish],
-      ["crawl_auth", "Auth crawl", "Credentialed fetch", "span-3", renderJsonish],
-      ["rendering", "Rendering", "JS / Playwright", "span-6", renderJsonish],
+      ["login_wall", "Login wall", "Access probe", "span-3", renderLoginWall],
+      ["crawl_auth", "Auth crawl", "Credentialed fetch", "span-3", renderCrawlAuth],
+      ["rendering", "Rendering", "JS / Playwright", "span-6", renderRendering],
       ["analyzers", "Analyzers", "Drill into each check", "span-6", renderAnalyzers],
       ["schedules", "Schedules", "Recurring audits", "span-6", renderSchedules],
       ["share", "Report / share", "PDF & public link", "span-3", renderShare],
@@ -1813,20 +1813,39 @@
       const strategies = d.strategies || [];
       const blocks = strategies.length
         ? strategies
-        : [{ strategy: d.strategy || "mobile", lab: d.lab || {} }];
+        : [{ strategy: d.strategy || "mobile", lab: d.lab || {}, field: d.field, origin_field: d.origin_field }];
+      function fieldChips(field, label) {
+        if (!field || typeof field !== "object") {
+          return `<p class="muted" style="margin:0.25rem 0 0">${esc(label)}: not available for this URL yet (CrUX needs enough traffic).</p>`;
+        }
+        const m = field.metrics || {};
+        const lcp = m.LARGEST_CONTENTFUL_PAINT_MS || m.largest_contentful_paint_ms;
+        const inp = m.INTERACTION_TO_NEXT_PAINT || m.interaction_to_next_paint || m.EXPERIMENTAL_INTERACTION_TO_NEXT_PAINT;
+        const cls = m.CUMULATIVE_LAYOUT_SHIFT_SCORE || m.cumulative_layout_shift_score;
+        const cat = field.overall_category || "—";
+        return `
+          <p class="muted" style="margin:0.45rem 0 0.25rem;text-transform:uppercase;letter-spacing:0.06em;font-size:0.68rem;font-weight:700">${esc(label)} · ${esc(cat)}</p>
+          <div class="psi-row">
+            <div class="psi-chip">LCP <strong>${esc(lcp && lcp.percentile != null ? lcp.percentile : "—")}</strong></div>
+            <div class="psi-chip">INP <strong>${esc(inp && inp.percentile != null ? inp.percentile : "—")}</strong></div>
+            <div class="psi-chip">CLS <strong>${esc(cls && cls.percentile != null ? cls.percentile : "—")}</strong></div>
+          </div>`;
+      }
       const html = blocks.map((s) => {
         const lab = s.lab || {};
         const perf = lab.performance_score;
         const tone = scoreTone(perf);
         return `
           <div style="margin-bottom:0.85rem">
-            <p class="muted" style="margin:0 0 0.35rem;text-transform:uppercase;letter-spacing:0.06em;font-size:0.7rem;font-weight:700">${esc(s.strategy || "mobile")}</p>
+            <p class="muted" style="margin:0 0 0.35rem;text-transform:uppercase;letter-spacing:0.06em;font-size:0.7rem;font-weight:700">${esc(s.strategy || "mobile")} · lab</p>
             <div class="psi-row">
               <div class="psi-chip">Perf <strong style="color:${tone.color}">${esc(perf ?? "—")}</strong></div>
               <div class="psi-chip">LCP <strong>${esc(lab.lcp_ms ?? "—")}</strong> ms</div>
               <div class="psi-chip">CLS <strong>${esc(lab.cls ?? "—")}</strong></div>
               <div class="psi-chip">INP <strong>${esc(lab.inp_ms ?? "—")}</strong> ms</div>
             </div>
+            ${fieldChips(s.field || d.field, "Field (this URL)")}
+            ${fieldChips(s.origin_field || d.origin_field, "Field (origin)")}
           </div>`;
       }).join("");
       const issues = (d.issues || []).slice(0, 5).map((i) => {
@@ -1840,7 +1859,7 @@
         </div>`;
       }).join("");
       el.innerHTML = `
-        <p class="muted" style="margin-top:0">Status: ${esc(d.status || "ok")}</p>
+        <p class="muted" style="margin-top:0">Status: ${esc(d.status || "ok")} · Lab = Lighthouse test; Field = real Chrome UX when available</p>
         ${html}
         ${issues ? `<div class="list-block"><div class="lb-title">PSI findings</div>${issues}</div>` : ""}`;
     }
@@ -2431,6 +2450,91 @@
       ).join("")}</ul>`;
     }
 
+    function renderLoginWall(el, d) {
+      if (!d || typeof d !== "object") {
+        el.innerHTML = emptyState("No login-wall probe", BLANK_HINTS.login_wall);
+        return;
+      }
+      const requires = !!d.requires_login;
+      const conf = d.confidence || "—";
+      el.innerHTML = `
+        <div class="metrics" style="margin-top:0">
+          <div class="metric ${requires ? "bad" : "good"}"><div class="n">${requires ? "Yes" : "No"}</div><div class="l">Requires login</div></div>
+          <div class="metric"><div class="n">${esc(conf)}</div><div class="l">Confidence</div></div>
+          <div class="metric"><div class="n">${esc(d.status_code ?? "—")}</div><div class="l">HTTP</div></div>
+        </div>
+        <p class="muted">${esc(d.message || "")}</p>
+        ${(d.signals || []).length
+          ? `<ul class="clean">${(d.signals || []).slice(0, 6).map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
+          : ""}
+        ${d.final_url ? `<p class="muted">Final URL <code>${esc(d.final_url)}</code></p>` : ""}`;
+    }
+
+    function renderCrawlAuth(el, d) {
+      if (!d || typeof d !== "object") {
+        el.innerHTML = emptyState("No auth crawl data", "Run an audit with optional auth cookie/headers.");
+        return;
+      }
+      const used = !!d.credentials_used;
+      const supplied = !!d.credentials_supplied;
+      el.innerHTML = `
+        <div class="metrics" style="margin-top:0">
+          <div class="metric"><div class="n">${esc(d.mode || "none")}</div><div class="l">Mode</div></div>
+          <div class="metric ${used ? "good" : ""}"><div class="n">${used ? "Yes" : "No"}</div><div class="l">Creds used</div></div>
+          <div class="metric"><div class="n">${supplied ? "Yes" : "No"}</div><div class="l">Creds supplied</div></div>
+        </div>
+        <p class="muted">${esc(d.message || "Credentials stay in memory for this request only — never persisted.")}</p>
+        <p class="muted">Persisted: <strong>${d.credentials_persisted ? "yes (unexpected)" : "no"}</strong> · methods ${esc((d.methods_allowed || ["GET","HEAD"]).join(", "))}</p>`;
+    }
+
+    function renderRendering(el, d) {
+      if (!d || typeof d !== "object") {
+        el.innerHTML = emptyState("No rendering data", BLANK_HINTS.rendering);
+        return;
+      }
+      const incomplete = !!d.rendering_incomplete;
+      const urls = d.unreliable_pages || [];
+      el.innerHTML = `
+        <div class="metrics" style="margin-top:0">
+          <div class="metric ${incomplete ? "bad" : "good"}"><div class="n">${incomplete ? "Incomplete" : "OK"}</div><div class="l">Render</div></div>
+          <div class="metric"><div class="n">${d.playwright_available ? "Yes" : "No"}</div><div class="l">Playwright</div></div>
+          <div class="metric"><div class="n">${esc(Array.isArray(urls) ? urls.length : 0)}</div><div class="l">Unreliable pages</div></div>
+        </div>
+        ${incomplete
+          ? `<p class="ok-line">${esc(d.warning || "JS shell / incomplete render — score may be provisional.")}</p>`
+          : `<p class="muted">Rendering looks complete for this crawl.</p>`}
+        ${Array.isArray(urls) && urls.length
+          ? `<ul class="clean">${urls.slice(0, 6).map((u) => `<li><code>${esc(u)}</code></li>`).join("")}</ul>`
+          : ""}`;
+    }
+
+    function renderCompare(el, d) {
+      if (!d || (d.ready !== true && d.score_delta == null)) {
+        el.innerHTML = emptyState(
+          "Compare not ready",
+          (d && d.hint) || BLANK_HINTS.compare
+        );
+        return;
+      }
+      const delta = Number(d.score_delta);
+      let deltaHtml = `<span class="delta-flat">${esc(delta)}</span>`;
+      if (delta > 0) deltaHtml = `<span class="delta-up">+${esc(delta)}</span>`;
+      else if (delta < 0) deltaHtml = `<span class="delta-down">${esc(delta)}</span>`;
+      el.innerHTML = `
+        <div class="metrics" style="margin-top:0">
+          <div class="metric"><div class="n">${esc(d.previous_score ?? "—")}</div><div class="l">Previous</div></div>
+          <div class="metric"><div class="n">${esc(d.current_score ?? "—")}</div><div class="l">Latest</div></div>
+          <div class="metric ${delta > 0 ? "good" : delta < 0 ? "bad" : ""}"><div class="n">${deltaHtml}</div><div class="l">Delta</div></div>
+        </div>
+        <div class="metrics">
+          <div class="metric bad"><div class="n">${esc(d.new_issues ?? 0)}</div><div class="l">New issues</div></div>
+          <div class="metric good"><div class="n">${esc(d.resolved_issues ?? 0)}</div><div class="l">Resolved</div></div>
+          <div class="metric"><div class="n">${esc(d.unchanged_issue_count ?? 0)}</div><div class="l">Unchanged</div></div>
+        </div>
+        <p class="muted">${esc(d.summary || d.hint || "")}</p>
+        <p class="muted">History points: ${esc(d.history_count ?? "—")}</p>`;
+    }
+
     function renderAnalyzers(el, d) {
       const results = d.results || [];
       if (!results.length) {
@@ -2611,15 +2715,6 @@
           }
         });
       }
-    }
-
-    function renderCompare(el, d) {
-      el.innerHTML = `
-        <div class="metrics" style="margin-top:0">
-          <div class="metric"><div class="n">${esc(d.history_count ?? 0)}</div><div class="l">History</div></div>
-          <div class="metric ${d.ready ? "good" : ""}"><div class="n">${d.ready ? "Yes" : "No"}</div><div class="l">Ready</div></div>
-        </div>
-        <p class="muted">${esc(d.hint || "Need 2+ audits to compare score and issues.")}</p>`;
     }
 
     function esc(v) {

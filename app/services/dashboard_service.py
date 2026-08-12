@@ -78,6 +78,7 @@ class DashboardService:
         schedules = self._schedules_section(seed)
         gsc_live = self._safe_gsc(gsc_account_id, seed)
         ga4_live = self._safe_ga4(gsc_account_id, ga4_property_id)
+        rank_history = self._rank_history_section(seed)
 
         if latest is None:
             return {
@@ -88,7 +89,15 @@ class DashboardService:
                     "(Dashboard Run audit or POST /audit)."
                 ),
                 "config": config,
-                "tools": self._tools_catalog(config, None, gsc_live),
+                "tools": self._tools_catalog(
+                    config,
+                    None,
+                    gsc_live,
+                    ga4_section=ga4_live,
+                    trends=trends,
+                    rank_history=rank_history,
+                    schedules=schedules,
+                ),
                 "audit": _blank("No saved audit"),
                 "pagespeed": _blank("No saved audit"),
                 "google_search_console": gsc_live if gsc_live.get("available") else _blank(
@@ -101,7 +110,7 @@ class DashboardService:
                 "keywords": _blank("No keyword research on a saved audit"),
                 "serp": _blank("No SERP data — opt in with include_serp on audit"),
                 "rank": _blank("No rank checks — opt in with include_serp + keywords"),
-                "rank_history": self._rank_history_section(seed),
+                "rank_history": rank_history,
                 "backlinks": _blank(
                     "No backlinks data — opt in with include_backlinks on audit"
                 ),
@@ -119,7 +128,7 @@ class DashboardService:
                 "history": _filled(history) if history else _blank("No history"),
                 "schedules": schedules,
                 "share": _blank("Save an audit first, then POST /report/{id}/share"),
-                "compare": _blank("Need 2+ saved audits — use compare_audits"),
+                "compare": _blank("Need 2+ saved audits to compare"),
             }
 
         summary = latest.summary or {}
@@ -129,6 +138,7 @@ class DashboardService:
         serp = summary.get("serp")
         backlinks = summary.get("backlinks")
         keywords = summary.get("keyword_research")
+        # rank_history already computed before the empty early-return
         recs = summary.get("recommendations") or []
         optimization = None
         if latest.optimization is not None:
@@ -242,7 +252,7 @@ class DashboardService:
             "url": seed,
             "message": "",
             "config": config,
-            "tools": self._tools_catalog(config, summary, gsc_section),
+            "tools": [],  # filled after sections so has_data is honest
             "audit": _filled(audit_block),
             "pagespeed": _filled(pagespeed),
             "google_search_console": gsc_section,
@@ -252,7 +262,7 @@ class DashboardService:
             "rank": _filled(rank_checks) if rank_checks else _blank(
                 "No rank rows — run audit with include_serp + target_keywords"
             ),
-            "rank_history": self._rank_history_section(seed),
+            "rank_history": rank_history,
             "backlinks": _filled(backlinks),
             "recommendations": _filled(
                 {
@@ -338,18 +348,49 @@ class DashboardService:
                     ),
                 }
             ),
-            "compare": _filled(
-                {
-                    "hint": "POST /compare or Hermes compare_audits",
-                    "history_count": len(history),
-                    "ready": len(history) >= 2,
-                }
-            ),
+            "compare": self._compare_section(latest, history),
             # Back-compat for older UI
             "latest": audit_block,
             "opportunities": opportunities[:20],
         }
+        payload["tools"] = self._tools_catalog(
+            config,
+            summary,
+            gsc_section,
+            ga4_section=ga4_section,
+            trends=trends,
+            rank_history=payload["rank_history"],
+            schedules=schedules,
+        )
         return payload
+
+    def _compare_section(
+        self, latest: Any, history: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        if len(history) < 2:
+            return _blank("Need 2+ saved audits to compare score and issues")
+        try:
+            diff = self.memory.compare(latest)
+        except Exception as exc:  # noqa: BLE001
+            return _blank(f"Compare unavailable: {exc}")
+        if not diff.has_baseline:
+            return _blank(diff.summary or "No previous audit found for this URL")
+        return _filled(
+            {
+                "ready": True,
+                "history_count": len(history),
+                "score_delta": diff.score_delta,
+                "current_score": diff.current_score,
+                "previous_score": diff.previous_score,
+                "current_audit_id": diff.current_audit_id,
+                "previous_audit_id": diff.previous_audit_id,
+                "new_issues": len(diff.new_issues),
+                "resolved_issues": len(diff.resolved_issues),
+                "unchanged_issue_count": diff.unchanged_issue_count,
+                "summary": diff.summary,
+                "hint": "Latest saved audit vs the previous one for this URL.",
+            }
+        )
 
     def _rank_history_section(self, seed: str) -> dict[str, Any]:
         try:
@@ -593,12 +634,42 @@ class DashboardService:
         config: dict[str, Any],
         summary: dict[str, Any] | None,
         gsc_section: dict[str, Any],
+        *,
+        ga4_section: dict[str, Any] | None = None,
+        trends: dict[str, Any] | None = None,
+        rank_history: dict[str, Any] | None = None,
+        schedules: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         summary = summary or {}
+        ga4_section = ga4_section or {}
+        trends = trends or {}
+        rank_history = rank_history or {}
+        schedules = schedules or {}
 
         def has_ok(key: str) -> bool:
             block = summary.get(key)
             return isinstance(block, dict) and block.get("status") == "ok"
+
+        schedule_items: list[Any] = []
+        sched_data = (
+            schedules.get("data")
+            if isinstance(schedules, dict) and schedules.get("available")
+            else schedules
+        )
+        if isinstance(sched_data, dict):
+            schedule_items = list(sched_data.get("items") or [])
+        elif isinstance(sched_data, list):
+            schedule_items = sched_data
+
+        rank_hist_count = 0
+        if isinstance(rank_history, dict) and rank_history.get("available"):
+            rh = rank_history.get("data") or {}
+            if isinstance(rh, dict):
+                rank_hist_count = int(rh.get("count") or 0)
+        elif isinstance(rank_history, dict):
+            rank_hist_count = int(rank_history.get("count") or 0)
+
+        trend_count = int(trends.get("count") or 0)
 
         return [
             {
@@ -617,13 +688,17 @@ class DashboardService:
                 "id": "gsc",
                 "label": "Google Search Console",
                 "configured": config.get("gsc_oauth_configured"),
-                "has_data": gsc_section.get("available") or has_ok("google_search_console"),
+                "has_data": bool(
+                    gsc_section.get("available") or has_ok("google_search_console")
+                ),
             },
             {
                 "id": "ga4",
                 "label": "Google Analytics (GA4)",
                 "configured": config.get("gsc_oauth_configured"),
-                "has_data": has_ok("google_analytics"),
+                "has_data": bool(
+                    ga4_section.get("available") or has_ok("google_analytics")
+                ),
             },
             {
                 "id": "research_keywords",
@@ -649,7 +724,7 @@ class DashboardService:
                 "id": "list_rank_history",
                 "label": "Rank history",
                 "configured": True,
-                "has_data": True,
+                "has_data": rank_hist_count > 0,
             },
             {
                 "id": "check_backlinks",
@@ -673,19 +748,19 @@ class DashboardService:
                 "id": "list_seo_trends",
                 "label": "Trends / history",
                 "configured": True,
-                "has_data": True,
+                "has_data": trend_count > 0,
             },
             {
                 "id": "schedules",
                 "label": "Scheduled audits",
                 "configured": True,
-                "has_data": True,
+                "has_data": len(schedule_items) > 0,
             },
             {
                 "id": "alerts",
                 "label": "Schedule alerts",
                 "configured": config.get("alerts_configured"),
-                "has_data": config.get("alerts_configured"),
+                "has_data": bool(config.get("alerts_configured")),
             },
             {
                 "id": "generate_report",
