@@ -77,7 +77,17 @@ def test_tools_catalog_rank_history_and_trends_not_always_true():
     assert by_id["schedules"]["has_data"] is False
 
 
-def test_filled_blanks_payment_required():
-    out = _filled({"status": "payment_required", "message": "402 Payment Required"})
-    assert out["available"] is False
-    assert "402" in (out["reason"] or "")
+def test_filled_keeps_caller_keywords_as_partial():
+    from app.services.dashboard_service import _filled
+
+    out = _filled(
+        {
+            "status": "caller_provided_not_researched",
+            "is_real_research": False,
+            "message": "Caller only",
+            "keywords": ["seo", "books"],
+        }
+    )
+    assert out["available"] is True
+    assert out["status"] == "partial"
+    assert out["data"]["keywords"] == ["seo", "books"]

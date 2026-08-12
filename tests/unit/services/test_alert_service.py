@@ -72,15 +72,47 @@ def test_new_critical_trigger():
     assert crits[0]["code"] == "missing_title"
 
 
-def test_skip_without_webhook(monkeypatch):
+def test_skip_without_webhook(tmp_path):
     settings = Settings()
     settings.alerts = AlertSettings(webhook_url=None)
+    settings.storage.path = str(tmp_path / "audits.db")
     svc = AlertService(settings)
     out = svc.evaluate_and_notify(
         {
             "score": 50,
+            "seed_url": "https://example.com/",
             "summary": {"compare": {"has_baseline": True, "score_delta": -20}},
             "audit": {"diff": {"new_issues": []}},
         }
     )
     assert out["status"] == "skipped"
+    st = svc.status()
+    assert st["last"] is not None
+    assert st["last"]["fired"] is False
+    assert st["last"]["reason"] == "webhook_not_configured"
+
+
+def test_remember_last_on_fire(tmp_path, monkeypatch):
+    settings = Settings()
+    settings.alerts = AlertSettings(webhook_url="https://example.com/hook")
+    settings.storage.path = str(tmp_path / "audits.db")
+    svc = AlertService(settings)
+
+    def fake_post(url, payload, *, timeout):
+        return {"ok": True, "status_code": 200}
+
+    monkeypatch.setattr(svc, "_post_webhook", fake_post)
+    out = svc.evaluate_and_notify(
+        {
+            "audit_id": "a1",
+            "score": 50,
+            "seed_url": "https://example.com/",
+            "summary": {"compare": {"has_baseline": True, "score_delta": -20}},
+            "audit": {"diff": {"new_issues": []}},
+        }
+    )
+    assert out["fired"] is True
+    st = svc.status()
+    assert st["last"]["fired"] is True
+    assert "score_drop" in (st["last"]["trigger_types"] or [])
+    assert st["last"]["delivery"]["ok"] is True

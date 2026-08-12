@@ -29,7 +29,6 @@ _BLANK_STATUSES = frozenset(
         "missing_scope",
         "payment_required",
         "fetch_failed",
-        "caller_provided_not_researched",
     }
 )
 
@@ -44,6 +43,18 @@ def _filled(data: Any, *, status: str = "ok") -> dict[str, Any]:
             "data": None,
             "reason": data.get("message") or data.get("status") or "Unavailable",
             "raw_status": data.get("status"),
+        }
+    # Caller-supplied keywords without live research — show list, never look like volume data.
+    if isinstance(data, dict) and data.get("status") in {
+        "caller_provided_not_researched",
+        "caller_provided_research_error",
+    }:
+        return {
+            "status": "partial",
+            "available": True,
+            "data": data,
+            "reason": data.get("message")
+            or "Caller keywords only — not researched (no volume/CPC).",
         }
     # Partial SERP/etc. still show data but keep honest status.
     if isinstance(data, dict) and data.get("status") == "partial":

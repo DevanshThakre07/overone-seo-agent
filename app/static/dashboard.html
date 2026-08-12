@@ -1885,9 +1885,10 @@
       const metrics = (d.matches_audit_url || snap.site_url)
         ? `<div class="metrics">
             <div class="metric"><div class="n">${esc(opps)}</div><div class="l">Opps</div></div>
-            <div class="metric"><div class="n">${esc(clicks || "—")}</div><div class="l">Top-q clicks</div></div>
-            <div class="metric"><div class="n">${esc(impr || "—")}</div><div class="l">Top-q impr</div></div>
-          </div>`
+            <div class="metric"><div class="n">${esc(clicks || "—")}</div><div class="l">Listed queries · clicks</div></div>
+            <div class="metric"><div class="n">${esc(impr || "—")}</div><div class="l">Listed queries · impr</div></div>
+          </div>
+          <p class="muted" style="margin:0.35rem 0 0">These click/impr totals are the <strong>sum of the listed top queries only</strong> — not full Search Console site totals.</p>`
         : "";
       const queryList = queries.length
         ? `<div class="list-block"><div class="lb-title">Top queries</div><ul class="clean">${queries.slice(0, 8).map((q) =>
@@ -2121,31 +2122,52 @@
     }
 
     function renderKeywords(el, d) {
-      const metrics = d.metrics || d.research?.keywords || d.keywords || [];
+      const metrics = d.metrics || d.research?.keywords || d.keywords_metrics || [];
       const related = d.related || d.research?.related || [];
+      const callerOnly = d.is_real_research === false && String(d.status || "").startsWith("caller_provided");
+      const callerList = Array.isArray(d.keywords) ? d.keywords : [];
+      if (callerOnly && (!Array.isArray(metrics) || !metrics.length) && !related.length) {
+        el.innerHTML = `
+          <p class="warn-line" style="margin-top:0">Caller keywords only — <strong>not researched</strong>. No search volume, difficulty, or CPC from DataForSEO.</p>
+          <p class="muted">${esc(d.message || "")}</p>
+          ${callerList.length
+            ? `<ul class="clean">${callerList.slice(0, 20).map((k) => `<li><strong>${esc(k)}</strong> <span class="sev-pill warning">no metrics</span></li>`).join("")}</ul>`
+            : ""}
+          <p class="muted">Configure DataForSEO + re-run with keywords to get live research.</p>`;
+        return;
+      }
       if ((!Array.isArray(metrics) || !metrics.length) && !related.length) {
-        el.innerHTML = `<p class="muted">${esc(d.status || d.message || "Present")}</p>`;
+        el.innerHTML = emptyState(d.message || d.status || "No keyword research", BLANK_HINTS.keywords || "Run research or pass keywords with DataForSEO configured.");
         return;
       }
       const real = d.is_real_research === true
         ? '<span class="sev-pill ok">live DataForSEO</span>'
-        : (d.is_real_research === false ? '<span class="sev-pill warning">not live</span>' : "");
+        : (d.is_real_research === false
+          ? '<span class="sev-pill warning">not live research</span>'
+          : "");
+      const banner = callerOnly || d.is_real_research === false
+        ? `<p class="warn-line" style="margin-top:0">These rows are not verified live research${callerOnly ? " (caller-supplied seeds)" : ""}. Treat volume/CPC as missing unless the live pill is green.</p>`
+        : "";
       const table = (Array.isArray(metrics) && metrics.length)
         ? `<table><thead><tr><th>Keyword</th><th>Vol</th><th>KD</th><th>CPC</th><th>Comp</th><th>Intent</th></tr></thead><tbody>
           ${metrics.slice(0, 12).map((k) => {
             const intent = keywordIntent(k.keyword);
+            const vol = d.is_real_research ? (k.search_volume ?? "—") : "—";
+            const kd = d.is_real_research ? (k.keyword_difficulty ?? "—") : "—";
+            const cpc = d.is_real_research ? (k.cpc ?? k.average_cpc ?? "—") : "—";
+            const comp = d.is_real_research ? (k.competition ?? k.competition_index ?? "—") : "—";
             return `<tr>
               <td><strong>${esc(k.keyword || "")}</strong></td>
-              <td>${esc(k.search_volume ?? "—")}</td>
-              <td>${esc(k.keyword_difficulty ?? "—")}</td>
-              <td>${esc(k.cpc ?? k.average_cpc ?? "—")}</td>
-              <td>${esc(k.competition ?? k.competition_index ?? "—")}</td>
+              <td>${esc(vol)}</td>
+              <td>${esc(kd)}</td>
+              <td>${esc(cpc)}</td>
+              <td>${esc(comp)}</td>
               <td>${intent ? `<span class="sev-pill ${intent.sev}" title="${esc(intent.tip)}">${esc(intent.label)}</span>` : "—"}</td>
             </tr>`;
           }).join("")}
         </tbody></table>`
         : "";
-      const relatedBlock = (Array.isArray(related) && related.length)
+      const relatedBlock = (Array.isArray(related) && related.length && d.is_real_research)
         ? `<div class="list-block"><div class="lb-title">Related / gap ideas</div>
             <ul class="clean">${related.slice(0, 12).map((r) => {
               const kw = r.keyword || r;
@@ -2159,6 +2181,7 @@
             }).join("")}</ul></div>`
         : "";
       el.innerHTML = `
+        ${banner}
         <p class="muted" style="margin-top:0">${real} ${esc(d.message || "")}</p>
         ${table}
         ${relatedBlock}
@@ -2584,9 +2607,27 @@
 
     function renderSchedules(el, d) {
       const rows = Array.isArray(d) ? d : (d.items || []);
-      const alertNote = d && d.alerts
-        ? `<p class="muted" style="margin-top:0">Alerts: ${d.alerts.configured ? '<span class="sev-pill ok">webhook on</span>' : "set SEO_ALERT_WEBHOOK_URL"} · drop ≥ ${esc(d.alerts.score_drop_threshold ?? 5)}</p>`
-        : "";
+      const alerts = d && d.alerts ? d.alerts : null;
+      let alertNote = "";
+      if (alerts) {
+        const last = alerts.last || null;
+        let lastLine = "";
+        if (last && last.at) {
+          const fired = last.fired;
+          const ok = last.delivery && last.delivery.ok;
+          if (fired) {
+            lastLine = ` · last fire ${esc(String(last.at).slice(0, 19))} ${ok ? '<span class="sev-pill ok">delivered</span>' : '<span class="sev-pill critical">delivery failed</span>'}`;
+            if ((last.trigger_types || []).length) {
+              lastLine += ` (${esc((last.trigger_types || []).join(", "))})`;
+            }
+          } else if (last.status === "skipped") {
+            lastLine = ` · last check ${esc(String(last.at).slice(0, 19))} (webhook not set)`;
+          } else {
+            lastLine = ` · last check ${esc(String(last.at).slice(0, 19))} (no trigger)`;
+          }
+        }
+        alertNote = `<p class="muted" style="margin-top:0">Alerts: ${alerts.configured ? '<span class="sev-pill ok">webhook on</span>' : "set SEO_ALERT_WEBHOOK_URL"} · drop ≥ ${esc(alerts.score_drop_threshold ?? 5)}${lastLine}</p>`;
+      }
       if (!rows.length) {
         el.innerHTML = alertNote + emptyState(
           "No schedules",

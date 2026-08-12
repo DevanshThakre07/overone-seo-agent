@@ -7,7 +7,7 @@
 > - Companion status notes also live in `docs/GOOGLE_SEARCH_CONSOLE.md` (integrations detail).  
 > - **Two tracks:** **SEO-strong** (priority now) vs **Fast path** (sellable product — kept, starts after SEO-strong gate). Near-term / Future / Capability map stay the full roadmap.  
 > - **IDs to remember:** **S1–S4** = SEO-strong slices; **FP-1–FP-6** = Fast path slices — see **Glossary (S1 / S2 / …)** below.  
-> - Last updated: **2026-08-12** (Module Response Quality P1 — PSI field, compare, auth/render panels, tools honesty)
+> - Last updated: **2026-08-12** (Module Response Quality P2 — GSC label honesty, alerts last-fire, keyword caller-only)
 
 ---
 
@@ -93,6 +93,7 @@ Discover → Audit → Keywords → Rank/SERP → GSC gaps → Content advice
 | 2026-08-12 | **FP-4 Thin client scorecard** | Public `/share/{token}` HTML scorecard (score + top issues + rec peek + PDF); dashboard **Create client scorecard link**; README/allinfo contributor-facing |
 | 2026-08-12 | **Module Response Quality (P0)** | Provisional score labeled on dashboard + scorecard; SERP aggregate not “ok” on total failure; rank errors ≠ “not ranking”; trends since-previous vs window span; dashboard keeps recommendation evidence; `_filled` blanks payment/missing_scope/etc. |
 | 2026-08-12 | **Module Response Quality (P1)** | PageSpeed field/origin CrUX chips; login wall / auth crawl / rendering dedicated panels; compare shows score_delta + new/resolved; tools catalog `has_data` from real counts |
+| 2026-08-12 | **Module Response Quality (P2)** | GSC listed-query totals labeled (not site-wide); alerts `last` fire/delivery in status + schedules UI; caller keywords shown without fake volume |
 
 ### What “optimize” means today (explicit)
 
@@ -509,7 +510,7 @@ FP-1 Report trust (= S1) → FP-2 Host → FP-3 OAuth Publish (owner)
 | Status | Action |
 |--------|--------|
 | **Active stage** | **Module Response Quality** — honest/complete responses per integrated module (HTTPS parked) |
-| **Now (build)** | P0 + P1 shipped (PSI field, login/render panels, compare delta, tools has_data) → next optional module polish |
+| **Now (build)** | Module Response Quality P0–P2 shipped — HTTPS still parked |
 | **Owner parallel** | When ready: deploy HTTPS → OAuth; fund DataForSEO (PP-5) |
 | **Still deferred** | Form login; GEO; Apply; Local; Stripe; Slack workspace |
 

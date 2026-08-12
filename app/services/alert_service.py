@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -20,7 +22,8 @@ class AlertService:
     def status(self) -> dict[str, Any]:
         a = self.settings.alerts
         url = (a.webhook_url or "").strip()
-        return {
+        last = self._read_last()
+        out: dict[str, Any] = {
             "configured": bool(url),
             "webhook_url_set": bool(url),
             "score_drop_threshold": a.score_drop_threshold,
@@ -35,7 +38,20 @@ class AlertService:
                     "new-critical notifications (Slack/Discord/custom)."
                 )
             ),
+            "last": last,
         }
+        if last:
+            when = last.get("at") or "—"
+            if last.get("fired"):
+                ok = (last.get("delivery") or {}).get("ok")
+                out["message"] = (
+                    f"Last alert at {when}: "
+                    + ("delivered" if ok else "delivery failed")
+                    + f" ({', '.join(last.get('trigger_types') or []) or 'triggered'})."
+                )
+            elif last.get("status") == "ok" and last.get("fired") is False:
+                out["last_note"] = f"Last evaluate at {when}: no triggers."
+        return out
 
     def evaluate_and_notify(
         self,
@@ -51,7 +67,9 @@ class AlertService:
         a = self.settings.alerts
         webhook = (a.webhook_url or "").strip()
         if not webhook:
-            return {"status": "skipped", "reason": "webhook_not_configured"}
+            outcome = {"status": "skipped", "reason": "webhook_not_configured", "fired": False}
+            self._remember_last(outcome, result=result, schedule_id=schedule_id)
+            return outcome
 
         triggers = self.build_triggers(
             result,
@@ -59,7 +77,9 @@ class AlertService:
             on_new_critical=a.on_new_critical,
         )
         if not triggers:
-            return {"status": "ok", "fired": False, "triggers": []}
+            outcome = {"status": "ok", "fired": False, "triggers": []}
+            self._remember_last(outcome, result=result, schedule_id=schedule_id)
+            return outcome
 
         payload = {
             "event": "seo_alert",
@@ -85,13 +105,66 @@ class AlertService:
             http_status=delivery.get("status_code"),
             error=delivery.get("error"),
         )
-        return {
+        outcome = {
             "status": "ok" if delivery.get("ok") else "error",
             "fired": True,
             "triggers": triggers,
             "delivery": delivery,
             "payload": payload,
         }
+        self._remember_last(outcome, result=result, schedule_id=schedule_id)
+        return outcome
+
+    def _last_path(self) -> Path:
+        storage = Path(self.settings.storage.path).expanduser()
+        return storage.parent / "alert_last.json"
+
+    def _read_last(self) -> dict[str, Any] | None:
+        path = self._last_path()
+        try:
+            if not path.is_file():
+                return None
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else None
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _remember_last(
+        self,
+        outcome: dict[str, Any],
+        *,
+        result: dict[str, Any] | None = None,
+        schedule_id: str | None = None,
+    ) -> None:
+        """Persist last evaluate outcome (no secrets / no webhook URL)."""
+        result = result or {}
+        row = {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "status": outcome.get("status"),
+            "fired": bool(outcome.get("fired")),
+            "reason": outcome.get("reason"),
+            "trigger_types": [
+                t.get("type") for t in (outcome.get("triggers") or []) if isinstance(t, dict)
+            ],
+            "audit_id": result.get("audit_id"),
+            "seed_url": result.get("seed_url"),
+            "score": result.get("score"),
+            "schedule_id": schedule_id,
+            "delivery": {
+                "ok": (outcome.get("delivery") or {}).get("ok"),
+                "status_code": (outcome.get("delivery") or {}).get("status_code"),
+                "error": (outcome.get("delivery") or {}).get("error"),
+            }
+            if outcome.get("delivery")
+            else None,
+        }
+        try:
+            path = self._last_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(row, indent=2), encoding="utf-8")
+        except Exception as exc:  # noqa: BLE001
+            log_event(logger, "alert_last_persist_failed", error=str(exc))
+
 
     def build_triggers(
         self,
