@@ -39,10 +39,10 @@
     .wrap { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem 3.5rem; }
     header {
       display: grid;
-      gap: 0.4rem;
+      gap: 0.55rem;
       padding-bottom: 1.35rem;
       border-bottom: 1px solid var(--line);
-      margin-bottom: 1.35rem;
+      margin-bottom: 1.1rem;
       animation: rise 0.55s ease both;
     }
     header .brand {
@@ -53,7 +53,213 @@
       line-height: 1.02;
       color: var(--ink);
     }
-    header p { margin: 0; color: var(--muted); max-width: 38rem; font-size: 1.02rem; line-height: 1.45; }
+    header p { margin: 0; color: var(--muted); max-width: 42rem; font-size: 1.02rem; line-height: 1.5; }
+    .quality-strip {
+      display: grid;
+      gap: 0.75rem;
+      margin: 0 0 1.15rem;
+      padding: 0.95rem 1.05rem;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background:
+        linear-gradient(120deg, rgba(207, 232, 223, 0.55), transparent 42%),
+        linear-gradient(165deg, #f8fcfa, var(--panel));
+      animation: rise 0.55s ease 0.04s both;
+    }
+    .quality-strip .qs-title {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .quality-strip .qs-desc {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      max-width: 46rem;
+    }
+    .qs-steps {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.55rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    @media (max-width: 900px) {
+      .qs-steps { grid-template-columns: 1fr 1fr; }
+    }
+    .qs-steps li {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(185, 201, 193, 0.85);
+      border-radius: 2px;
+      padding: 0.55rem 0.65rem;
+      min-height: 100%;
+    }
+    .qs-steps .n {
+      display: inline-grid;
+      place-items: center;
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #f2fffb;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-right: 0.35rem;
+    }
+    .qs-steps strong {
+      display: block;
+      margin: 0.2rem 0 0.15rem;
+      font-size: 0.88rem;
+    }
+    .qs-steps span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+    .controls-shell {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      margin: 0 -0.35rem 1rem;
+      padding: 0.55rem 0.35rem 0.75rem;
+      background: linear-gradient(180deg, rgba(223, 232, 228, 0.96) 55%, rgba(223, 232, 228, 0.72));
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(185, 201, 193, 0.55);
+    }
+    .advanced-fold {
+      margin: 0 0 1.15rem;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: rgba(245, 250, 247, 0.75);
+      animation: rise 0.55s ease 0.08s both;
+    }
+    .advanced-fold > summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 0.85rem 1.05rem;
+      font-weight: 650;
+      color: var(--ink);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .advanced-fold > summary::-webkit-details-marker { display: none; }
+    .advanced-fold > summary::after {
+      content: "Show";
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .advanced-fold[open] > summary::after { content: "Hide"; }
+    .advanced-fold .fold-body {
+      padding: 0 0.85rem 0.95rem;
+      border-top: 1px solid rgba(185, 201, 193, 0.65);
+    }
+    .advanced-fold .feature-callout {
+      margin: 0.75rem 0 0;
+    }
+    .signal-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0 0 1rem;
+      animation: rise 0.45s ease both;
+    }
+    .signal-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 2px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.7);
+      font-size: 0.78rem;
+      font-weight: 650;
+      color: var(--muted);
+    }
+    .signal-pill b { color: var(--ink); font-family: "Fraunces", Georgia, serif; font-size: 0.95rem; }
+    .signal-pill.ready { border-color: #8fbfad; background: var(--accent-soft); color: var(--good); }
+    .signal-pill.partial { border-color: #e0c08a; background: #fef6e8; color: var(--warn); }
+    .signal-pill.blank { border-color: var(--line); }
+    .signal-pill.issue { border-color: #e8b0aa; background: #fdecea; color: var(--bad); }
+    .zone {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1rem;
+      margin: 0 0 0.35rem;
+    }
+    .zone-head {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      justify-content: space-between;
+      gap: 0.5rem 1rem;
+      padding: 0.35rem 0.15rem 0.15rem;
+      margin-top: 0.35rem;
+    }
+    .zone-head h3 {
+      margin: 0;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .zone-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      max-width: 36rem;
+      line-height: 1.4;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 2px;
+      font-size: 0.65rem;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .status-badge.ready { background: var(--accent-soft); color: var(--good); }
+    .status-badge.partial { background: #fef0e0; color: var(--warn); }
+    .status-badge.blank { background: rgba(122, 134, 128, 0.14); color: var(--blank); }
+    .status-badge.provisional { background: #fff3cd; color: #6a4b00; }
+    .status-badge.error { background: #fde8e6; color: var(--bad); }
+    .panel-desc {
+      margin: -0.35rem 0 0.75rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+    .blank-box .blank-next {
+      margin: 0.55rem 0 0;
+      padding-top: 0.55rem;
+      border-top: 1px dashed rgba(185, 201, 193, 0.8);
+      font-size: 0.84rem;
+      color: var(--ink);
+      line-height: 1.4;
+    }
+    .blank-box .blank-next strong {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
     form.controls {
       display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: end;
       margin-bottom: 1rem;
@@ -658,9 +864,27 @@
   <div class="wrap">
     <header>
       <div class="brand">SEO Agent</div>
-      <p>One site, every signal in view. Empty sections mean the data was not run or is unavailable — nothing is invented.</p>
+      <p>
+        Descriptive SEO for one site: crawl health, Google demand, traffic, and on-page advice —
+        with honest empty states when a signal was not run. Nothing here invents rankings or revenue.
+      </p>
     </header>
 
+    <div class="quality-strip" id="qualityStrip">
+      <p class="qs-title">How to get a high-quality report</p>
+      <p class="qs-desc">
+        Follow the path below. Each panel explains what it means and what to do next.
+        Prefer Standard crawl (15 pages) unless you are only smoke-testing.
+      </p>
+      <ol class="qs-steps">
+        <li><span class="n">1</span><strong>Connect context</strong><span>URL + API key. Add Google account_id for Search Console / GA4.</span></li>
+        <li><span class="n">2</span><strong>Load or audit</strong><span>Load dashboard for the last save, or Run audit to refresh evidence.</span></li>
+        <li><span class="n">3</span><strong>Read Overview first</strong><span>Score, critical issues, then recommendations with evidence.</span></li>
+        <li><span class="n">4</span><strong>Share what matters</strong><span>Create a client scorecard link or download PDF when ready.</span></li>
+      </ol>
+    </div>
+
+    <div class="controls-shell">
     <form class="controls" id="loadForm">
       <label>Site URL
         <input id="url" type="url" required placeholder="https://example.com/" />
@@ -681,7 +905,13 @@
       <button type="button" id="runAudit" title="POST /audit then reload">Run audit</button>
       <button type="button" class="secondary" id="runOptimize" title="POST /optimize — LLM rewrite advice">Get optimize advice</button>
     </form>
+    </div>
 
+    <details class="advanced-fold" id="advancedActions">
+      <summary>
+        <span>Advanced actions — rank tracker, placement, schedules</span>
+      </summary>
+      <div class="fold-body">
     <div class="feature-callout" id="rankTracker">
       <div class="callout-head">
         <h2>Keyword position tracker</h2>
@@ -740,13 +970,15 @@
       </div>
       <p class="hint" style="margin:0.65rem 0 0">Needs API key. seo-api must stay running for schedules to fire.</p>
     </div>
+      </div>
+    </details>
 
     <div class="audit-opts" id="auditOpts">
       <div class="callout-head">
         <h2>Audit options</h2>
         <button type="button" class="info-btn" data-help="audit_options" aria-label="What are Audit options?">i</button>
       </div>
-      <p class="hint">Maps 1:1 to <code>POST /audit</code>. Paid SERP/backlinks and LLM optimize are opt-in. Auth credentials stay in memory for that request only.</p>
+      <p class="hint">These switches control what the next <strong>Run audit</strong> measures. Leave paid SERP/backlinks off unless you need them — empty panels stay honest when skipped.</p>
 
       <div class="opt-grid">
         <label class="w-sm">Max pages
@@ -1037,14 +1269,36 @@
       openHelp(btn.getAttribute("data-help"));
     });
 
-    function panelHeadHtml(title, subtitle, helpKey) {
+    function panelHeadHtml(title, subtitle, helpKey, badgeHtml) {
       return `<div class="panel-head">
         <div class="panel-head-left">
           <h2>${esc(title)}</h2>
           <button type="button" class="info-btn" data-help="${esc(helpKey)}" aria-label="What is ${esc(title)}?">i</button>
+          ${badgeHtml || ""}
         </div>
         <span class="panel-sub">${esc(subtitle || "")}</span>
       </div>`;
+    }
+
+    function statusBadge(kind, label) {
+      return `<span class="status-badge ${esc(kind)}">${esc(label)}</span>`;
+    }
+
+    function blockBadge(block, key) {
+      if (!block || !block.available) {
+        const reason = String(block && block.reason || "");
+        if (/402|payment/i.test(reason)) return statusBadge("error", "Billing");
+        return statusBadge("blank", "Not run");
+      }
+      if (block.status === "partial") return statusBadge("partial", "Partial");
+      const data = block.data || {};
+      if (key === "audit" && (data.score_status === "provisional" || data.score_note)) {
+        return statusBadge("provisional", "Provisional");
+      }
+      if (key === "keywords" && data.is_real_research === false) {
+        return statusBadge("partial", "Caller only");
+      }
+      return statusBadge("ready", "Ready");
     }
 
     async function loadGa4Options(preferred) {
@@ -1545,36 +1799,107 @@
       renderKeywordPlan(body, data);
     }
 
-    // Opt-in / secondary panels — collapse when blank so the first viewport stays useful.
+    // Opt-in / secondary panels — collapse when blank so Overview stays useful.
     const COLLAPSE_WHEN_BLANK = new Set([
       "keywords", "serp", "rank", "rank_history", "backlinks", "optimization", "keyword_plan",
-      "schedules", "compare",
+      "schedules", "compare", "login_wall", "crawl_auth",
     ]);
 
-    const SECTIONS = [
-      ["audit", "Site audit", "Latest score & crawl", "span-4", renderAudit],
-      ["pagespeed", "PageSpeed / CWV", "Lab vitals", "span-4", renderPagespeed],
-      ["google_search_console", "Search Console", "Queries & opportunities", "span-4", renderGsc],
-      ["google_analytics", "Google Analytics", "Traffic snapshot", "span-4", renderGa4],
-      ["trends", "Score trends", "Movement over time", "span-6", renderTrends],
-      ["history", "Audit history", "Saved runs", "span-6", renderHistory],
-      ["top_issues", "Top issues", "What to fix first", "span-6", renderIssues],
-      ["recommendations", "Recommendations", "Actionable next steps", "span-6", renderRecs],
-      ["keywords", "Keyword research", "Volume & difficulty", "span-4", renderKeywords],
-      ["serp", "SERP", "Who ranks today", "span-4", renderSerp],
-      ["rank", "Rank check", "Your keyword positions", "span-4", renderRank],
-      ["rank_history", "Rank history", "Positions over time", "span-6", renderRankHistory],
-      ["backlinks", "Backlinks", "Spam risk & referring domains", "span-6", renderBacklinks],
-      ["optimization", "Optimize advice", "Copy-ready rewrites", "span-6", renderOptimize],
-      ["keyword_plan", "Keyword placement", "Where to use terms on-page", "span-6", renderKeywordPlan],
-      ["login_wall", "Login wall", "Access probe", "span-3", renderLoginWall],
-      ["crawl_auth", "Auth crawl", "Credentialed fetch", "span-3", renderCrawlAuth],
-      ["rendering", "Rendering", "JS / Playwright", "span-6", renderRendering],
-      ["analyzers", "Analyzers", "Drill into each check", "span-6", renderAnalyzers],
-      ["schedules", "Schedules", "Recurring audits", "span-6", renderSchedules],
-      ["share", "Report / share", "PDF & public link", "span-3", renderShare],
-      ["compare", "Compare audits", "Diff readiness", "span-3", renderCompare],
+    const ZONES = [
+      {
+        id: "overview",
+        title: "Overview — health & fixes",
+        desc: "Start here. Score and critical issues decide what to fix before competitive research.",
+        keys: ["audit", "pagespeed", "top_issues", "recommendations"],
+      },
+      {
+        id: "demand",
+        title: "Demand & traffic",
+        desc: "Real Google Search and Analytics signals — how people find you and what they do next.",
+        keys: ["google_search_console", "google_analytics", "trends", "history"],
+      },
+      {
+        id: "competitive",
+        title: "Competitive & keywords",
+        desc: "Opt-in paid research. Empty means not run — never invents ranks or volumes.",
+        keys: ["keywords", "serp", "rank", "rank_history", "backlinks"],
+      },
+      {
+        id: "onpage",
+        title: "On-page advice",
+        desc: "Copy and placement guidance grounded in the live page. Advice only — does not edit your site.",
+        keys: ["optimization", "keyword_plan"],
+      },
+      {
+        id: "technical",
+        title: "Technical crawl quality",
+        desc: "Whether we could see the real page (login walls, auth, JS rendering) and analyzer coverage.",
+        keys: ["login_wall", "crawl_auth", "rendering", "analyzers"],
+      },
+      {
+        id: "ops",
+        title: "Delivery & monitoring",
+        desc: "Share with clients, compare runs, and keep schedules honest about alert delivery.",
+        keys: ["share", "compare", "schedules"],
+      },
     ];
+
+    const SECTION_META = {
+      audit: { title: "Site audit", subtitle: "Score & crawl scope", span: "span-4", desc: "Overall SEO health from the latest crawl. Read Critical count before chasing keywords.", fn: null },
+      pagespeed: { title: "PageSpeed / CWV", subtitle: "Lab + field when available", span: "span-4", desc: "How fast the page feels. Lab = Lighthouse test; Field = real Chrome UX when Google has enough data.", fn: null },
+      google_search_console: { title: "Search Console", subtitle: "Queries & opportunities", span: "span-4", desc: "How Google actually shows you in search. Listed click/impr are sums of shown queries, not full site totals.", fn: null },
+      google_analytics: { title: "Google Analytics", subtitle: "Traffic snapshot", span: "span-4", desc: "Sessions and top pages after people arrive. We never invent revenue.", fn: null },
+      trends: { title: "Score trends", subtitle: "Movement over time", span: "span-6", desc: "Saved scores over time. “Since previous” is last vs prior audit; window span is oldest→newest.", fn: null },
+      history: { title: "Audit history", subtitle: "Saved runs", span: "span-6", desc: "Past saved audits for this URL — use with Compare.", fn: null },
+      top_issues: { title: "Top issues", subtitle: "Fix order", span: "span-6", desc: "Prioritized problems from analyzers. Critical first, then warnings.", fn: null },
+      recommendations: { title: "Recommendations", subtitle: "Evidence-backed actions", span: "span-6", desc: "Concrete next steps with current/suggested values. Suggestions do not change the live site.", fn: null },
+      keywords: { title: "Keyword research", subtitle: "Volume & difficulty", span: "span-4", desc: "Live DataForSEO metrics when configured. Caller-only seeds never show fake volume.", fn: null },
+      serp: { title: "SERP", subtitle: "Who ranks today", span: "span-4", desc: "Top organic competitors for your tracked keywords (paid opt-in).", fn: null },
+      rank: { title: "Rank check", subtitle: "Your positions", span: "span-4", desc: "Where this site ranks now. Billing/API errors are labeled — never as “not ranking.”", fn: null },
+      rank_history: { title: "Rank history", subtitle: "Positions over time", span: "span-6", desc: "Position checks across dates. Dashes mean not found in that SERP slice.", fn: null },
+      backlinks: { title: "Backlinks", subtitle: "Risk & referring domains", span: "span-6", desc: "Link profile snapshot with spam risk. Needs DataForSEO funds.", fn: null },
+      optimization: { title: "Optimize advice", subtitle: "Copy-ready rewrites", span: "span-6", desc: "LLM title/meta/H1 suggestions grounded in extracted page facts.", fn: null },
+      keyword_plan: { title: "Keyword placement", subtitle: "On-page slots", span: "span-6", desc: "Where each keyword should appear on the page (not Google rank).", fn: null },
+      login_wall: { title: "Login wall", subtitle: "Access probe", span: "span-3", desc: "Whether the URL looks gated behind login.", fn: null },
+      crawl_auth: { title: "Auth crawl", subtitle: "Credentialed fetch", span: "span-3", desc: "Did this audit use in-memory cookies/headers? Secrets are never stored.", fn: null },
+      rendering: { title: "Rendering", subtitle: "JS / Playwright", span: "span-6", desc: "If the page is a JS shell, on-page findings may be provisional until Playwright renders it.", fn: null },
+      analyzers: { title: "Analyzers", subtitle: "Drill-down checks", span: "span-6", desc: "Each SEO plugin that ran — expand a row for exact issue codes and URLs.", fn: null },
+      schedules: { title: "Schedules", subtitle: "Recurring audits", span: "span-6", desc: "Timers for re-audits plus last alert delivery status when configured.", fn: null },
+      share: { title: "Report / share", subtitle: "PDF & scorecard", span: "span-3", desc: "Download PDF or create a public client scorecard link (no API key for viewers).", fn: null },
+      compare: { title: "Compare audits", subtitle: "Latest vs previous", span: "span-3", desc: "Score delta and new/resolved issues between the last two saved audits.", fn: null },
+    };
+
+    // Bind renderers after function declarations load — patched in renderAll bootstrap.
+    const SECTION_RENDERERS = {
+      audit: (...a) => renderAudit(...a),
+      pagespeed: (...a) => renderPagespeed(...a),
+      google_search_console: (...a) => renderGsc(...a),
+      google_analytics: (...a) => renderGa4(...a),
+      trends: (...a) => renderTrends(...a),
+      history: (...a) => renderHistory(...a),
+      top_issues: (...a) => renderIssues(...a),
+      recommendations: (...a) => renderRecs(...a),
+      keywords: (...a) => renderKeywords(...a),
+      serp: (...a) => renderSerp(...a),
+      rank: (...a) => renderRank(...a),
+      rank_history: (...a) => renderRankHistory(...a),
+      backlinks: (...a) => renderBacklinks(...a),
+      optimization: (...a) => renderOptimize(...a),
+      keyword_plan: (...a) => renderKeywordPlan(...a),
+      login_wall: (...a) => renderLoginWall(...a),
+      crawl_auth: (...a) => renderCrawlAuth(...a),
+      rendering: (...a) => renderRendering(...a),
+      analyzers: (...a) => renderAnalyzers(...a),
+      schedules: (...a) => renderSchedules(...a),
+      share: (...a) => renderShare(...a),
+      compare: (...a) => renderCompare(...a),
+    };
+
+    // Back-compat alias used by older patch helpers
+    const SECTIONS = Object.keys(SECTION_META).map((key) => {
+      const m = SECTION_META[key];
+      return [key, m.title, m.subtitle, m.span, SECTION_RENDERERS[key]];
+    });
 
     document.getElementById("loadForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -1677,45 +2002,99 @@
       const root = document.getElementById("content");
       root.hidden = false;
       root.innerHTML = "";
+
+      // Signal quality summary — helps operators trust what they see.
+      let ready = 0, partial = 0, blank = 0, provisional = 0;
+      Object.keys(SECTION_META).forEach((key) => {
+        const block = data[key] || { available: false };
+        if (!block.available) { blank += 1; return; }
+        if (block.status === "partial") { partial += 1; return; }
+        const d = block.data || {};
+        if (key === "audit" && (d.score_status === "provisional" || d.score_note)) provisional += 1;
+        else ready += 1;
+      });
+      const summary = document.createElement("div");
+      summary.className = "signal-summary span-12";
+      summary.style.gridColumn = "1 / -1";
+      summary.innerHTML = `
+        <span class="signal-pill ready"><b>${ready}</b> ready</span>
+        <span class="signal-pill partial"><b>${partial}</b> partial</span>
+        <span class="signal-pill blank"><b>${blank}</b> not run</span>
+        ${provisional ? `<span class="signal-pill issue"><b>${provisional}</b> provisional score</span>` : ""}
+        <span class="signal-pill">Reading order: Overview → Demand → Competitive (opt-in)</span>`;
+      root.appendChild(summary);
+
       if (data.status === "empty") {
         const note = document.createElement("section");
         note.className = "panel span-12";
-        note.innerHTML = `${panelHeadHtml("Status", "Get started", "status")}
-          <div class="blank-box">
-            <p class="blank-title">No saved audit for this URL yet</p>
-            <p class="blank">${esc(data.message || "Set options above, then Run audit. The dashboard fills from the latest saved run.")}</p>
-          </div>`;
+        note.innerHTML = `${panelHeadHtml("Status", "Get started", "status", statusBadge("blank", "Empty"))}
+          <p class="panel-desc">The dashboard shows the latest <strong>saved</strong> audit. Until one exists, panels stay empty on purpose.</p>
+          ${emptyState(
+            data.message || "No saved audit for this URL yet",
+            "Set crawl options (Standard 15 is recommended), keep Save on, then click Run audit.",
+            "After the audit finishes, click Load dashboard to refresh every zone."
+          )}`;
         root.appendChild(note);
       }
 
-      SECTIONS.forEach(([key, title, subtitle, span, fn], idx) => {
-        const section = document.createElement("section");
-        section.id = "sec-" + key;
-        section.className = "panel " + span;
-        section.style.animationDelay = Math.min(idx * 0.03, 0.35) + "s";
-        section.innerHTML = panelHeadHtml(title, subtitle, key);
-        const body = document.createElement("div");
-        body.className = "body";
-        const block = data[key] || { status: "blank", available: false, reason: "No data" };
-        if (!block.available) {
-          if (COLLAPSE_WHEN_BLANK.has(key)) {
-            section.classList.add("collapsed-opt", "span-3");
-            section.classList.remove("span-4", "span-6");
-            body.innerHTML = `<button type="button" class="opt-toggle">Not run — ${esc(block.reason || "opt-in on audit")}</button>`;
-            body.querySelector(".opt-toggle").addEventListener("click", () => {
-              body.innerHTML = emptyState(block.reason || "Blank", BLANK_HINTS[key] || "Enable this option on the next audit.");
-              section.classList.remove("collapsed-opt");
-              section.className = "panel " + span;
-            });
-          } else {
-            const reason = friendlyPaidError(block.reason || "Blank");
-            body.innerHTML = emptyState(reason, BLANK_HINTS[key] || "");
+      let idx = 0;
+      ZONES.forEach((zone) => {
+        const zoneEl = document.createElement("div");
+        zoneEl.className = "zone";
+        zoneEl.id = "zone-" + zone.id;
+        const head = document.createElement("div");
+        head.className = "zone-head";
+        head.innerHTML = `<div><h3>${esc(zone.title)}</h3><p>${esc(zone.desc)}</p></div>`;
+        zoneEl.appendChild(head);
+
+        zone.keys.forEach((key) => {
+          const meta = SECTION_META[key];
+          if (!meta) return;
+          const fn = SECTION_RENDERERS[key];
+          const span = meta.span;
+          const section = document.createElement("section");
+          section.id = "sec-" + key;
+          section.className = "panel " + span;
+          section.style.animationDelay = Math.min(idx * 0.03, 0.4) + "s";
+          idx += 1;
+          const block = data[key] || { status: "blank", available: false, reason: "No data" };
+          section.innerHTML = panelHeadHtml(meta.title, meta.subtitle, key, blockBadge(block, key));
+          if (meta.desc) {
+            const desc = document.createElement("p");
+            desc.className = "panel-desc";
+            desc.textContent = meta.desc;
+            section.appendChild(desc);
           }
-        } else {
-          fn(body, block.data, data);
-        }
-        section.appendChild(body);
-        root.appendChild(section);
+          const body = document.createElement("div");
+          body.className = "body";
+          if (!block.available) {
+            if (COLLAPSE_WHEN_BLANK.has(key)) {
+              section.classList.add("collapsed-opt", "span-3");
+              section.classList.remove("span-4", "span-6");
+              body.innerHTML = `<button type="button" class="opt-toggle">Not run — ${esc(block.reason || "opt-in on audit")} · expand</button>`;
+              body.querySelector(".opt-toggle").addEventListener("click", () => {
+                body.innerHTML = emptyState(
+                  friendlyPaidError(block.reason || "Blank"),
+                  BLANK_HINTS[key] || "Enable this option on the next audit.",
+                  BLANK_NEXT[key] || ""
+                );
+                section.classList.remove("collapsed-opt");
+                section.className = "panel " + span;
+              });
+            } else {
+              body.innerHTML = emptyState(
+                friendlyPaidError(block.reason || "Blank"),
+                BLANK_HINTS[key] || "",
+                BLANK_NEXT[key] || ""
+              );
+            }
+          } else {
+            fn(body, block.data, data);
+          }
+          section.appendChild(body);
+          zoneEl.appendChild(section);
+        });
+        root.appendChild(zoneEl);
       });
     }
 
@@ -1729,21 +2108,36 @@
       top_issues: "Issues appear after a successful crawl.",
       recommendations: "Recommendations come from analyzers + GSC opportunities.",
       keywords: "Use keyword research tools or include keywords on audit.",
-      serp: "Activate Keyword position tracker + enter target keywords, then Check positions.",
-      rank: "Activate Keyword position tracker + enter target keywords, then Check positions.",
-      rank_history: "Runs accumulate after position checks (Include SERP / Check positions).",
-      backlinks: "Opt in to Include backlinks (paid).",
+      serp: "Open Advanced actions → Activate position tracker + keywords → Check positions.",
+      rank: "Open Advanced actions → Activate position tracker + keywords → Check positions.",
+      rank_history: "Runs accumulate after position checks.",
+      backlinks: "Opt in to Include backlinks (paid DataForSEO).",
       optimization: "Check Optimize advice or use Get optimize advice.",
-      keyword_plan: "Click Get keyword placement (not Position tracker). Uses live page + optional target keywords.",
-      schedules: "Create a schedule via API to monitor this site.",
-      share: "Save an audit first, then download PDF or create a share link.",
+      keyword_plan: "Open Advanced actions → Get keyword placement.",
+      login_wall: "Appears after an audit that probed the seed URL.",
+      crawl_auth: "Enable Authenticated crawl and supply cookie/headers if needed.",
+      rendering: "Shows after crawl; enable Playwright for JS-heavy sites.",
+      analyzers: "Analyzer drill-down appears after a saved audit.",
+      schedules: "Open Advanced actions → Create schedule, then Load dashboard.",
+      share: "Save an audit first, then download PDF or create a client scorecard link.",
       compare: "Need two or more saved audits to compare.",
     };
 
-    function emptyState(reason, hint) {
+    const BLANK_NEXT = {
+      audit: "Click Run audit (Save on) → then Load dashboard.",
+      pagespeed: "Set PageSpeed to On — mobile, then re-run audit.",
+      google_search_console: "Use Connect Google with this account_id, then Load dashboard.",
+      google_analytics: "Save GA4 default + Include GA4, then Run audit.",
+      recommendations: "Fix Top issues first; recs update on the next saved audit.",
+      share: "Use Create client scorecard link in this panel after a saved audit.",
+      compare: "Run a second saved audit for the same URL.",
+    };
+
+    function emptyState(reason, hint, nextStep) {
       return `<div class="blank-box">
         <p class="blank-title">${esc(reason || "No data")}</p>
         ${hint ? `<p class="blank">${esc(hint)}</p>` : ""}
+        ${nextStep ? `<p class="blank-next"><strong>Next step</strong>${esc(nextStep)}</p>` : ""}
       </div>`;
     }
 

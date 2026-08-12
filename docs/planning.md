@@ -7,7 +7,7 @@
 > - Companion status notes also live in `docs/GOOGLE_SEARCH_CONSOLE.md` (integrations detail).  
 > - **Two tracks:** **SEO-strong** (priority now) vs **Fast path** (sellable product — kept, starts after SEO-strong gate). Near-term / Future / Capability map stay the full roadmap.  
 > - **IDs to remember:** **S1–S4** = SEO-strong slices; **FP-1–FP-6** = Fast path slices — see **Glossary (S1 / S2 / …)** below.  
-> - Last updated: **2026-08-12** (Module Response Quality P2 — GSC label honesty, alerts last-fire, keyword caller-only)
+> - Last updated: **2026-08-12** (Dashboard UX — descriptive zones, status badges, quality workflow)
 
 ---
 
@@ -94,6 +94,7 @@ Discover → Audit → Keywords → Rank/SERP → GSC gaps → Content advice
 | 2026-08-12 | **Module Response Quality (P0)** | Provisional score labeled on dashboard + scorecard; SERP aggregate not “ok” on total failure; rank errors ≠ “not ranking”; trends since-previous vs window span; dashboard keeps recommendation evidence; `_filled` blanks payment/missing_scope/etc. |
 | 2026-08-12 | **Module Response Quality (P1)** | PageSpeed field/origin CrUX chips; login wall / auth crawl / rendering dedicated panels; compare shows score_delta + new/resolved; tools catalog `has_data` from real counts |
 | 2026-08-12 | **Module Response Quality (P2)** | GSC listed-query totals labeled (not site-wide); alerts `last` fire/delivery in status + schedules UI; caller keywords shown without fake volume |
+| 2026-08-12 | **Dashboard UX quality** | Workflow strip; sticky controls; advanced actions fold; zoned results; Ready/Partial/Not run badges; descriptive panel copy + next-step empties |
 
 ### What “optimize” means today (explicit)
 

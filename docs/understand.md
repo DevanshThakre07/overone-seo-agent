@@ -5,6 +5,13 @@ Nothing here invents data — empty panels mean that signal was not run or is un
 
 **In the live UI:** every section has a small **i** button. Click it for “What is this?”, “What should I do?”, and a tip.
 
+**Dashboard layout (quality UX):**
+1. **How to get a high-quality report** — 4-step path at the top  
+2. Sticky controls — URL / API key / Load / Run audit  
+3. **Advanced actions** (collapsed) — rank tracker, placement, schedules  
+4. Results in zones: Overview → Demand & traffic → Competitive → On-page → Technical → Delivery  
+5. Each panel shows **Ready / Partial / Not run / Provisional** so empty never looks like success  
+
 **Dashboard URL (local):** `http://localhost:8000/dashboard/ui?url=https://example.com/`
 
 ---
