@@ -41,6 +41,17 @@ def test_safe_gsc_matches_domain_property():
         "sites": [{"site_url": "sc-domain:actoro.app"}],
         "count": 1,
     }
+    fake.performance.return_value = {
+        "site_url": "sc-domain:actoro.app",
+        "period": {"start": "2026-07-13", "end": "2026-08-10", "days": 28},
+        "top_queries": [
+            {"query": "actoro", "impressions": 1, "clicks": 0, "position": 1.0}
+        ],
+        "top_pages": [],
+        "opportunities": [],
+        "opportunity_count": 0,
+        "status": "ok",
+    }
     with patch(
         "app.integrations.google.service.GoogleSearchConsoleService",
         return_value=fake,
@@ -48,3 +59,7 @@ def test_safe_gsc_matches_domain_property():
         out = svc._safe_gsc("demo", "https://actoro.app/")
     assert out["data"]["matches_audit_url"] is True
     assert out["data"]["matched_site_url"] == "sc-domain:actoro.app"
+    assert out["data"]["snapshot_source"] == "live"
+    assert out["data"]["snapshot"]["top_queries"][0]["query"] == "actoro"
+    fake.performance.assert_called_once()
+    assert "page-2 opportunities" in (out["data"]["message"] or "").lower()

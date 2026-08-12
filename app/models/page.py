@@ -40,6 +40,11 @@ class PageExtraction(BaseModel):
     error: str | None = None
     has_json_ld: bool = False
     schema_types: list[str] = Field(default_factory=list)
+    # S3: richer schema validation inputs (bounded; optional on older audits)
+    json_ld_parse_errors: int = 0
+    json_ld_script_count: int = 0
+    # Shallow blocks: {ok, types, error?, props?} — capped in extractor
+    json_ld_blocks: list[dict[str, Any]] = Field(default_factory=list)
     # Enriched extraction fields (backward-compatible additions)
     title_source: str | None = None
     meta_description_source: str | None = None

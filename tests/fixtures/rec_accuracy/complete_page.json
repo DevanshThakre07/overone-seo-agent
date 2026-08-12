@@ -1,0 +1,21 @@
+{
+  "url": "https://example.com/sample",
+  "final_url": "https://example.com/sample",
+  "status_code": 200,
+  "title": "Sample SEO Page With Enough Title Length",
+  "meta_description": "A sample page used for SEO extractor tests with a meta description long enough for quality checks.",
+  "h1": ["Welcome to Sample SEO Page"],
+  "h2": ["Features"],
+  "canonical": "https://example.com/sample",
+  "js_rendered": true,
+  "word_count": 200,
+  "images": [
+    {
+      "src": "/images/hero.jpg",
+      "alt": "Hero image",
+      "alt_present": true,
+      "decorative": false,
+      "is_source": false
+    }
+  ]
+}

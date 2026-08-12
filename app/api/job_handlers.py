@@ -67,3 +67,19 @@ def finalize_schedule_from_job(
         audit_id=audit_id,
         error=(error[:500] if error else None),
     )
+
+
+def after_audit_job_success(
+    result: dict[str, Any],
+    payload: dict[str, Any] | None = None,
+    *,
+    schedule_id: str | None = None,
+    job_id: str | None = None,
+) -> None:
+    """Finalize schedule + fire monitoring alerts (best-effort)."""
+    sid = schedule_id or (payload or {}).get("schedule_id")
+    finalize_schedule_from_job(payload or {"schedule_id": sid}, audit_id=result.get("audit_id"))
+    from app.services.alert_service import maybe_alert_after_job
+
+    # Alerts use compare/diff from the audit result (scheduled audits set compare=true).
+    maybe_alert_after_job(result, schedule_id=sid, job_id=job_id)

@@ -6,149 +6,466 @@
   <title>SEO Agent Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #ece7df;
-      --ink: #141311;
-      --muted: #5f5a52;
-      --line: #cfc6b8;
-      --panel: #fffaf3;
-      --accent: #0d5c45;
-      --accent-soft: #d7ebe3;
-      --warn: #8b3a1a;
-      --blank: #8a8378;
+      --bg: #dfe8e4;
+      --ink: #0f1714;
+      --muted: #5a6560;
+      --line: #b9c9c1;
+      --panel: #f5faf7;
+      --panel-2: #eef6f1;
+      --accent: #045c4e;
+      --accent-soft: #cfe8df;
+      --good: #0a6b52;
+      --warn: #a15c12;
+      --bad: #b42318;
+      --info: #1f4b6e;
+      --blank: #7a8680;
+      --score-track: #d3e0da;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "DM Sans", system-ui, sans-serif;
+      font-family: "Figtree", sans-serif;
       color: var(--ink);
       background:
-        linear-gradient(165deg, #e4ddd1 0%, transparent 42%),
-        radial-gradient(circle at 90% 10%, #d9e8e1 0%, transparent 35%),
+        radial-gradient(ellipse 70% 50% at 0% 0%, rgba(4, 92, 78, 0.12), transparent 55%),
+        radial-gradient(ellipse 55% 40% at 100% 8%, rgba(31, 75, 110, 0.1), transparent 50%),
+        repeating-linear-gradient(-12deg, transparent, transparent 11px, rgba(15, 23, 20, 0.015) 11px, rgba(15, 23, 20, 0.015) 12px),
         var(--bg);
       min-height: 100vh;
     }
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem 3.5rem; }
     header {
       display: grid;
-      gap: 0.35rem;
-      padding-bottom: 1.25rem;
+      gap: 0.4rem;
+      padding-bottom: 1.35rem;
       border-bottom: 1px solid var(--line);
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.35rem;
+      animation: rise 0.55s ease both;
     }
     header .brand {
-      font-family: "Instrument Serif", Georgia, serif;
-      font-size: clamp(2rem, 4vw, 2.75rem);
-      letter-spacing: -0.02em;
-      line-height: 1.05;
-    }
-    header p { margin: 0; color: var(--muted); max-width: 40rem; }
-    form.controls {
-      display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: end;
-      margin-bottom: 1.25rem;
-    }
-    label { display: grid; gap: 0.3rem; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-    input, select {
-      min-width: min(100%, 18rem);
-      padding: 0.6rem 0.75rem;
-      border: 1px solid var(--line);
-      background: var(--panel);
-      font: inherit;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: clamp(2.15rem, 4.2vw, 2.9rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.02;
       color: var(--ink);
     }
+    header p { margin: 0; color: var(--muted); max-width: 38rem; font-size: 1.02rem; line-height: 1.45; }
+    form.controls {
+      display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: end;
+      margin-bottom: 1rem;
+      animation: rise 0.55s ease 0.06s both;
+    }
+    label { display: grid; gap: 0.32rem; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+    input, select {
+      min-width: min(100%, 18rem);
+      padding: 0.62rem 0.78rem;
+      border: 1px solid var(--line);
+      background: #fff;
+      font: inherit;
+      color: var(--ink);
+      border-radius: 2px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(4, 92, 78, 0.15);
+    }
     button {
-      padding: 0.65rem 1.1rem;
+      padding: 0.68rem 1.15rem;
       border: 0;
       background: var(--accent);
-      color: #f4fffa;
+      color: #f2fffb;
       font: inherit;
-      font-weight: 600;
+      font-weight: 650;
       cursor: pointer;
+      border-radius: 2px;
+      transition: transform 0.12s ease, background 0.15s ease;
     }
+    button:hover { background: #03483d; }
+    button:active { transform: translateY(1px); }
     button.secondary {
       background: transparent;
       color: var(--accent);
       border: 1px solid var(--accent);
     }
+    button.secondary:hover { background: var(--accent-soft); }
+    button.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      padding: 0.35rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
     button:disabled { opacity: 0.5; cursor: wait; }
     .tools {
-      display: flex; flex-wrap: wrap; gap: 0.4rem;
-      margin-bottom: 1.25rem;
+      display: flex; flex-wrap: wrap; gap: 0.45rem;
+      margin-bottom: 1rem;
     }
     .chip {
-      font-size: 0.75rem;
-      padding: 0.28rem 0.55rem;
+      font-size: 0.74rem;
+      padding: 0.3rem 0.55rem;
       border: 1px solid var(--line);
-      background: var(--panel);
+      background: rgba(245, 250, 247, 0.9);
       color: var(--muted);
+      font-weight: 500;
+      border-radius: 2px;
     }
     .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-    .chip.off { opacity: 0.7; }
+    .chip.off { opacity: 0.65; }
     .grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
-      gap: 0.85rem;
+      gap: 1rem;
     }
     .span-3 { grid-column: span 3; }
     .span-4 { grid-column: span 4; }
     .span-6 { grid-column: span 6; }
     .span-8 { grid-column: span 8; }
     .span-12 { grid-column: span 12; }
-    @media (max-width: 860px) {
+    @media (max-width: 900px) {
       .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
     }
     section.panel {
-      background: var(--panel);
+      background: linear-gradient(165deg, #f8fcfa 0%, var(--panel) 55%, var(--panel-2) 100%);
       border: 1px solid var(--line);
-      padding: 1rem 1.1rem 1.15rem;
-      min-height: 7.5rem;
+      padding: 1.05rem 1.15rem 1.2rem;
+      min-height: 8rem;
+      border-radius: 3px;
+      animation: rise 0.5s ease both;
+      transition: border-color 0.2s ease;
     }
-    section.panel h2 {
-      margin: 0 0 0.7rem;
+    section.panel:hover { border-color: #9bb5aa; }
+    .panel-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.85rem;
+      padding-bottom: 0.55rem;
+      border-bottom: 1px solid rgba(185, 201, 193, 0.65);
+    }
+    .panel-head-left {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      min-width: 0;
+    }
+    .info-btn {
+      flex-shrink: 0;
+      width: 1.35rem;
+      height: 1.35rem;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: #fff;
+      color: var(--accent);
+      font: inherit;
       font-size: 0.72rem;
-      letter-spacing: 0.08em;
+      font-weight: 750;
+      font-style: italic;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-grid;
+      place-items: center;
+    }
+    .info-btn:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .help-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 20, 0.35);
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      animation: rise 0.2s ease both;
+    }
+    .help-backdrop[hidden] { display: none; }
+    .help-card {
+      width: min(100%, 28rem);
+      background: #f8fcfa;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 1.15rem 1.2rem 1.25rem;
+      max-height: min(80vh, 32rem);
+      overflow: auto;
+    }
+    .help-card h3 {
+      margin: 0 0 0.65rem;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .help-card p {
+      margin: 0 0 0.65rem;
+      color: var(--ink);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .help-card .help-label {
+      margin: 0.85rem 0 0.25rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .help-card .help-close {
+      margin-top: 1rem;
+      width: 100%;
+    }
+    .callout-head {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.15rem;
+    }
+    .callout-head h2 { margin: 0; }
+    section.panel h2 {
+      margin: 0;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .panel-sub {
+      font-size: 0.72rem;
+      color: var(--blank);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-align: right;
+    }
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      margin-bottom: 0.85rem;
+    }
+    .score-ring {
+      --p: 0;
+      width: 5.4rem;
+      height: 5.4rem;
+      border-radius: 50%;
+      background: conic-gradient(var(--ring-color, var(--accent)) calc(var(--p) * 1%), var(--score-track) 0);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .score-ring::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: var(--panel);
+    }
+    .score-ring .score {
+      position: relative;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.85rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .score-meta { display: grid; gap: 0.35rem; min-width: 0; }
+    .score-meta .kicker {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 650;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+      gap: 0.55rem;
+      margin: 0.65rem 0 0.85rem;
+    }
+    .metric {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(185, 201, 193, 0.7);
+      padding: 0.55rem 0.6rem;
+      border-radius: 2px;
+    }
+    .metric .n {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+    .metric .l {
+      margin-top: 0.15rem;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       color: var(--muted);
       font-weight: 600;
     }
-    .score {
-      font-family: "Instrument Serif", Georgia, serif;
-      font-size: 3.2rem;
-      line-height: 1;
-    }
+    .metric.bad .n { color: var(--bad); }
+    .metric.warn .n { color: var(--warn); }
+    .metric.good .n { color: var(--good); }
     .muted { color: var(--muted); font-size: 0.9rem; }
+    .blank-box {
+      border: 1px dashed var(--line);
+      background: rgba(255,255,255,0.35);
+      padding: 0.85rem 0.9rem;
+      border-radius: 2px;
+    }
+    .blank-box .blank-title {
+      margin: 0 0 0.25rem;
+      font-weight: 650;
+      font-size: 0.92rem;
+    }
     .blank {
       color: var(--blank);
-      font-size: 0.9rem;
-      font-style: italic;
+      font-size: 0.88rem;
       margin: 0;
+      line-height: 1.4;
     }
-    ul { margin: 0; padding-left: 1.1rem; }
-    li { margin: 0.3rem 0; font-size: 0.92rem; }
-    code { font-size: 0.84em; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    th, td { text-align: left; padding: 0.35rem 0.25rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-    th { color: var(--muted); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .list-block { margin: 0.55rem 0 0; }
+    .list-block .lb-title {
+      margin: 0 0 0.4rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    ul.clean { margin: 0; padding: 0; list-style: none; }
+    ul.clean li {
+      margin: 0;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(185, 201, 193, 0.55);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+    ul.clean li:last-child { border-bottom: 0; }
+    .sev-pill {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.12rem 0.35rem;
+      border-radius: 2px;
+      margin-right: 0.35rem;
+      vertical-align: 0.05em;
+    }
+    .sev-pill.critical { background: #fde8e6; color: var(--bad); }
+    .sev-pill.warning { background: #fef0e0; color: var(--warn); }
+    .sev-pill.info { background: #e7eef5; color: var(--info); }
+    .sev-pill.ok, .sev-pill.good { background: var(--accent-soft); color: var(--good); }
+    .issue-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.55rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(185, 201, 193, 0.55);
+      font-size: 0.9rem;
+    }
+    .issue-row:last-child { border-bottom: 0; }
+    .issue-bar {
+      width: 3px;
+      border-radius: 1px;
+      background: var(--muted);
+    }
+    .issue-bar.critical { background: var(--bad); }
+    .issue-bar.warning { background: var(--warn); }
+    .issue-bar.info { background: var(--info); }
+    .issue-code {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.15rem;
+    }
+    .opt-card {
+      margin: 0.65rem 0 0;
+      padding: 0.75rem 0.8rem;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid rgba(185, 201, 193, 0.75);
+      border-radius: 2px;
+    }
+    .opt-card .opt-url {
+      font-weight: 650;
+      font-size: 0.88rem;
+      word-break: break-all;
+      margin-bottom: 0.55rem;
+    }
+    .opt-field {
+      margin: 0.45rem 0;
+      padding: 0.45rem 0.5rem;
+      background: #fff;
+      border-left: 3px solid var(--accent);
+    }
+    .opt-field .of-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 0.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .opt-field .of-val { font-size: 0.9rem; line-height: 1.4; }
+    .psi-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0.35rem 0 0.65rem;
+    }
+    .psi-chip {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.5rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+    }
+    .psi-chip strong { font-family: "Fraunces", Georgia, serif; font-size: 1rem; }
+    .delta-up { color: var(--good); font-weight: 650; }
+    .delta-down { color: var(--bad); font-weight: 650; }
+    .delta-flat { color: var(--muted); font-weight: 650; }
+    code { font-size: 0.84em; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    th, td { text-align: left; padding: 0.45rem 0.3rem; border-bottom: 1px solid rgba(185, 201, 193, 0.6); vertical-align: top; }
+    th { color: var(--muted); font-weight: 650; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
     .chart {
-      display: flex; align-items: end; gap: 0.35rem;
-      height: 110px; margin-top: 0.4rem;
+      display: flex; align-items: end; gap: 0.4rem;
+      height: 120px; margin-top: 0.5rem;
+      padding: 0.35rem 0.2rem 0;
+      border-bottom: 1px solid var(--line);
     }
     .bar {
-      flex: 1; background: var(--accent); min-width: 8px; position: relative; opacity: 0.88;
+      flex: 1; background: linear-gradient(180deg, #0a8a70, var(--accent));
+      min-width: 10px; position: relative; border-radius: 2px 2px 0 0;
+      transition: height 0.4s ease;
     }
     .bar span {
       position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-      font-size: 0.65rem; color: var(--muted); white-space: nowrap;
+      font-size: 0.65rem; color: var(--muted); white-space: nowrap; font-weight: 600;
+      margin-bottom: 0.15rem;
     }
-    .err { color: var(--warn); margin: 0.75rem 0; }
-    .sev strong { font-weight: 650; }
-    .warn-line { color: var(--warn); font-size: 0.92rem; margin: 0.35rem 0 0.6rem; }
-    .ok-line { color: var(--accent); font-size: 0.9rem; margin: 0.35rem 0 0.6rem; }
+    .err { color: var(--bad); margin: 0.75rem 0; font-weight: 500; }
+    .warn-line { color: var(--warn); font-size: 0.9rem; margin: 0.35rem 0 0.55rem; font-weight: 500; }
+    .ok-line { color: var(--good); font-size: 0.9rem; margin: 0.35rem 0 0.55rem; font-weight: 500; }
     section.panel.collapsed-opt {
-      opacity: 0.72;
+      opacity: 0.78;
       min-height: 0;
+      background: rgba(245, 250, 247, 0.7);
     }
     section.panel.collapsed-opt .opt-toggle {
       margin: 0;
@@ -161,19 +478,22 @@
       cursor: pointer;
       text-align: left;
     }
+    section.panel.collapsed-opt .opt-toggle:hover { color: var(--accent); }
     .audit-opts {
-      background: var(--panel);
+      background: linear-gradient(165deg, #f8fcfa, var(--panel));
       border: 1px solid var(--line);
-      padding: 1rem 1.1rem 1.15rem;
-      margin: -0.35rem 0 1.25rem;
+      padding: 1.05rem 1.15rem 1.2rem;
+      margin: 0 0 1.35rem;
+      border-radius: 3px;
+      animation: rise 0.55s ease 0.1s both;
     }
     .audit-opts > h2 {
-      margin: 0 0 0.85rem;
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
+      margin: 0 0 0.35rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--muted);
-      font-weight: 600;
+      font-weight: 700;
     }
     .audit-opts .opt-grid {
       display: flex;
@@ -203,12 +523,14 @@
       font-size: 0.9rem;
       color: var(--ink);
       cursor: pointer;
+      font-weight: 500;
     }
     .audit-opts .check input { min-width: 0; width: auto; }
     .audit-opts .hint {
-      margin: 0 0 0.75rem;
+      margin: 0 0 0.85rem;
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.84rem;
+      line-height: 1.4;
     }
     .audit-opts details {
       border-top: 1px solid var(--line);
@@ -219,7 +541,30 @@
       color: var(--muted);
       font-size: 0.85rem;
       margin-bottom: 0.65rem;
+      font-weight: 600;
     }
+    details.analyzer-drill {
+      margin: 0.45rem 0 0;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid rgba(185, 201, 193, 0.75);
+      background: rgba(255,255,255,0.55);
+      border-radius: 2px;
+    }
+    details.analyzer-drill summary {
+      cursor: pointer;
+      font-size: 0.92rem;
+      color: var(--ink);
+      font-weight: 650;
+      list-style: none;
+    }
+    details.analyzer-drill summary::-webkit-details-marker { display: none; }
+    details.analyzer-drill summary::before {
+      content: "▸ ";
+      color: var(--muted);
+      font-weight: 700;
+    }
+    details.analyzer-drill[open] summary::before { content: "▾ "; }
+    details.analyzer-drill .issue-row { margin-top: 0.35rem; }
     .audit-opts textarea {
       min-height: 4.5rem;
       padding: 0.6rem 0.75rem;
@@ -228,18 +573,92 @@
       font: inherit;
       color: var(--ink);
       resize: vertical;
+      border-radius: 2px;
+    }
+    .feature-callout {
+      margin: 0 0 1rem;
+      padding: 0.95rem 1.05rem;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      background: linear-gradient(165deg, #f8fcfa, var(--panel));
+      border-radius: 2px;
+      animation: rise 0.55s ease 0.08s both;
+    }
+    .feature-callout h2 {
+      margin: 0 0 0.25rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .feature-callout .feat-title {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0 0 0.35rem;
+      letter-spacing: -0.02em;
+    }
+    .feature-callout .feat-desc {
+      margin: 0 0 0.75rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      max-width: 40rem;
+    }
+    .feature-callout .feat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      align-items: end;
+    }
+    .feature-callout .feat-row label {
+      flex: 1 1 16rem;
+    }
+    .feature-callout .feat-row input[type="text"] {
+      min-width: 0;
+      width: 100%;
+    }
+    .feature-callout .check {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 0.92rem;
+      color: var(--ink);
+      font-weight: 650;
+      cursor: pointer;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 2px;
+      align-self: stretch;
+    }
+    .feature-callout .check input { min-width: 0; width: auto; }
+    .feature-callout .check.on {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
     }
     .w-sm { width: 6.5rem; }
     .w-md { width: 12rem; }
     .w-lg { width: min(100%, 22rem); }
     .w-full { width: 100%; flex: 1 1 100%; }
+    a { color: var(--accent); font-weight: 600; }
+    a:hover { color: #03483d; }
+    #status, #auditResult { line-height: 1.45; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div class="brand">SEO Agent</div>
-      <p>Full toolkit view for one site. Sections stay blank when data or APIs are unavailable — nothing is invented.</p>
+      <p>One site, every signal in view. Empty sections mean the data was not run or is unavailable — nothing is invented.</p>
     </header>
 
     <form class="controls" id="loadForm">
@@ -248,6 +667,9 @@
       </label>
       <label>Google account_id (optional)
         <input id="gsc" type="text" placeholder="e.g. demo" />
+      </label>
+      <label>API key <span class="muted">(needed for Run audit when SEO_API_KEY is set)</span>
+        <input id="apiKey" type="password" placeholder="from SEO-Agent/.env → SEO_API_KEY" autocomplete="off" />
       </label>
       <label>GA4 property (optional)
         <select id="ga4">
@@ -260,13 +682,75 @@
       <button type="button" class="secondary" id="runOptimize" title="POST /optimize — LLM rewrite advice">Get optimize advice</button>
     </form>
 
+    <div class="feature-callout" id="rankTracker">
+      <div class="callout-head">
+        <h2>Keyword position tracker</h2>
+        <button type="button" class="info-btn" data-help="rank_tracker" aria-label="What is Keyword position tracker?">i</button>
+      </div>
+      <div class="feat-title">Where do you rank right now?</div>
+      <p class="feat-desc">
+        Opt in to check each target keyword in live Google SERP via DataForSEO (paid),
+        then fill <strong>Rank check</strong>, <strong>SERP</strong>, and <strong>Rank history</strong>.
+        This does <strong>not</strong> fill Keyword placement — use that block below.
+      </p>
+      <div class="feat-row">
+        <label class="check" id="rankTrackerCheckLabel" title="Paid DataForSEO — writes rank snapshots">
+          <input id="includeSerp" type="checkbox" /> Activate position tracker
+        </label>
+        <label>Target keywords
+          <input id="optKeywords" type="text" placeholder="actoro, ai actor booking" />
+        </label>
+        <button type="button" id="runRankCheck" title="Run audit with SERP/rank on">Check positions</button>
+      </div>
+      <p class="hint" style="margin:0.65rem 0 0">Needs API key + DataForSEO balance. Keywords required when activated.</p>
+    </div>
+
+    <div class="feature-callout" id="keywordPlacement">
+      <div class="callout-head">
+        <h2>Keyword placement</h2>
+        <button type="button" class="info-btn" data-help="keyword_plan_action" aria-label="What is Keyword placement?">i</button>
+      </div>
+      <div class="feat-title">Where should these terms go on the page?</div>
+      <p class="feat-desc">
+        Fetches the live URL and maps your keywords into title / meta / headings / body slots.
+        Separate from position tracking (Google rank). Uses the same target keywords field above when set.
+      </p>
+      <div class="feat-row">
+        <button type="button" id="runKeywordPlan" title="POST /keyword-plan — live page placement">Get keyword placement</button>
+      </div>
+      <p class="hint" style="margin:0.65rem 0 0">Needs API key. Optional keywords; works better with 1–5 targets.</p>
+    </div>
+
+    <div class="feature-callout" id="scheduleAssign">
+      <div class="callout-head">
+        <h2>Schedules</h2>
+        <button type="button" class="info-btn" data-help="schedules" aria-label="What are Schedules?">i</button>
+      </div>
+      <div class="feat-title">Assign a recurring audit</div>
+      <p class="feat-desc">
+        Automatically re-audit this site on a timer. Uses the Site URL above.
+        Results show in the Schedules panel after you Load dashboard.
+      </p>
+      <div class="feat-row">
+        <label class="w-sm">Every hours
+          <input id="scheduleHours" type="number" min="1" max="720" value="24" />
+        </label>
+        <button type="button" id="createSchedule">Create schedule</button>
+        <button type="button" class="secondary" id="runDueSchedules" title="POST /schedules/run-due">Run due now</button>
+      </div>
+      <p class="hint" style="margin:0.65rem 0 0">Needs API key. seo-api must stay running for schedules to fire.</p>
+    </div>
+
     <div class="audit-opts" id="auditOpts">
-      <h2>Audit options</h2>
+      <div class="callout-head">
+        <h2>Audit options</h2>
+        <button type="button" class="info-btn" data-help="audit_options" aria-label="What are Audit options?">i</button>
+      </div>
       <p class="hint">Maps 1:1 to <code>POST /audit</code>. Paid SERP/backlinks and LLM optimize are opt-in. Auth credentials stay in memory for that request only.</p>
 
       <div class="opt-grid">
         <label class="w-sm">Max pages
-          <input id="maxPages" type="number" min="1" max="200" value="1" />
+          <input id="maxPages" type="number" min="1" max="200" value="15" />
         </label>
         <label class="w-sm">Max depth
           <input id="maxDepth" type="number" min="0" max="10" placeholder="default" />
@@ -276,22 +760,25 @@
         </label>
         <label class="w-md">PageSpeed
           <select id="pagespeedMode">
-            <option value="false" selected>Off (faster)</option>
-            <option value="true">On (slow)</option>
+            <option value="false">Off (faster)</option>
+            <option value="true" selected>On — mobile CWV</option>
             <option value="auto">Auto if API key set</option>
           </select>
         </label>
-        <label class="w-lg">Target keywords
-          <input id="optKeywords" type="text" placeholder="actoro, ai actor booking" />
-        </label>
       </div>
+      <p class="hint" id="crawlScopeHint" style="margin-top:-0.35rem">
+        Crawl scope presets:
+        <button type="button" class="ghost" data-scope="3">Quick (3)</button>
+        <button type="button" class="ghost" data-scope="15">Standard (15)</button>
+        <button type="button" class="ghost" data-scope="50">Deep (50)</button>
+        — default is Standard. Use Quick only for a smoke check.
+      </p>
 
       <div class="check-row">
         <label class="check" title="Persist audit to storage"><input id="saveAudit" type="checkbox" checked /> Save</label>
         <label class="check" title="Diff vs previous saved audit"><input id="compareAudit" type="checkbox" /> Compare</label>
         <label class="check" title="Needs Google account_id + GA4 property/preference"><input id="includeGa4" type="checkbox" checked /> Include GA4</label>
         <label class="check" title="Needs OPENAI_API_KEY; stores rewrite advice on the audit"><input id="includeOptimize" type="checkbox" /> Optimize advice</label>
-        <label class="check" title="Paid DataForSEO — needs target keywords"><input id="includeSerp" type="checkbox" /> Include SERP / rank</label>
         <label class="check" title="Paid DataForSEO backlink snapshot"><input id="includeBacklinks" type="checkbox" /> Include backlinks</label>
         <label class="check" title="Queue job and poll GET /jobs/{id}"><input id="backgroundAudit" type="checkbox" /> Run in background</label>
         <label class="check" title="Use cookie/headers below for crawl"><input id="useAuthCrawl" type="checkbox" /> Authenticated crawl</label>
@@ -318,11 +805,247 @@
     <div id="content" class="grid" hidden></div>
   </div>
 
+  <div id="helpBackdrop" class="help-backdrop" hidden>
+    <div class="help-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <h3 id="helpTitle"></h3>
+      <p class="help-label">What is this?</p>
+      <p id="helpWhat"></p>
+      <p class="help-label">What should I do?</p>
+      <p id="helpDo"></p>
+      <p class="help-label">Tip</p>
+      <p id="helpTip"></p>
+      <button type="button" class="help-close" id="helpClose">Got it</button>
+    </div>
+  </div>
+
   <script>
     const params = new URLSearchParams(location.search);
     if (params.get("url")) document.getElementById("url").value = params.get("url");
     if (params.get("gsc_account_id")) document.getElementById("gsc").value = params.get("gsc_account_id");
     const initialGa4 = params.get("ga4_property_id") || "";
+    const apiKeyInput = document.getElementById("apiKey");
+    try {
+      const savedKey = sessionStorage.getItem("seo_api_key") || "";
+      if (savedKey) apiKeyInput.value = savedKey;
+    } catch (_) {}
+    apiKeyInput.addEventListener("change", () => {
+      try {
+        const v = apiKeyInput.value.trim();
+        if (v) sessionStorage.setItem("seo_api_key", v);
+        else sessionStorage.removeItem("seo_api_key");
+      } catch (_) {}
+      // GA4 list needs the key — reload after it is set
+      if (document.getElementById("gsc").value.trim()) loadGa4Options();
+    });
+    apiKeyInput.addEventListener("blur", () => {
+      if (document.getElementById("gsc").value.trim() && apiKeyInput.value.trim()) {
+        loadGa4Options();
+      }
+    });
+
+    function apiHeaders(extra) {
+      const headers = Object.assign({ "Content-Type": "application/json" }, extra || {});
+      const key = (apiKeyInput.value || "").trim();
+      if (key) headers["X-API-Key"] = key;
+      return headers;
+    }
+
+    const SECTION_HELP = {
+      audit: {
+        title: "Site audit",
+        what: "This is your website’s overall SEO health score after we crawl it. Think of it like a report card for how search-friendly the site is.",
+        do: "Look at the big number first. Then check how many Critical and Warning problems you have. Fix Critical ones first.",
+        tip: "A higher score is better. The score can change when you crawl more pages or fix issues.",
+      },
+      pagespeed: {
+        title: "PageSpeed / Core Web Vitals",
+        what: "This measures how fast your page feels to load. Google cares about speed because slow pages frustrate visitors.",
+        do: "If the performance number is low, or LCP is high, your page may feel slow. Ask a developer to improve images, scripts, and hosting.",
+        tip: "Mobile speed usually matters more than desktop for Google ranking.",
+      },
+      google_search_console: {
+        title: "Google Search Console",
+        what: "This is real data from Google about how people find you in search: which words they typed, how often you appeared, and how many clicked.",
+        do: "Read top queries and top pages. Opportunities are searches where you almost rank well and could improve.",
+        tip: "Needs Connect Google and a verified property for this site.",
+      },
+      google_analytics: {
+        title: "Google Analytics (GA4)",
+        what: "This shows real visitors to your site: how many sessions, users, and which pages they viewed.",
+        do: "Pick a GA4 property, save it as default, then run an audit with Include GA4 (or reload the dashboard).",
+        tip: "Search Console = how people find you. Analytics = what they do after they arrive.",
+      },
+      trends: {
+        title: "Score trends",
+        what: "A simple chart of your audit score over time, from older saves to newer ones.",
+        do: "If bars go up, SEO health is improving. If they go down, something got worse since the last audit.",
+        tip: "You need at least two saved audits to see a useful trend.",
+      },
+      history: {
+        title: "Audit history",
+        what: "A list of past audits we saved for this website.",
+        do: "Use it to compare today’s score and issue count with earlier runs.",
+        tip: "Only appears when Save is checked on Run audit.",
+      },
+      top_issues: {
+        title: "Top issues",
+        what: "The specific problems we found (for example: title too short, missing canonical).",
+        do: "Start with Critical, then Warning. Each line tells you what is wrong in plain terms.",
+        tip: "This is the most actionable list for fixing the site.",
+      },
+      recommendations: {
+        title: "Recommendations",
+        what: "Suggested next steps based on the audit — often including better wording ideas.",
+        do: "Treat this as a to-do list. Copy useful suggestions into your website or CMS.",
+        tip: "These are suggestions. They do not automatically change your live site.",
+      },
+      keywords: {
+        title: "Keyword research",
+        what: "Shows how popular a search word is (volume), how hard it may be to rank (difficulty), CPC, competition, plus related ideas.",
+        do: "Pick keywords with useful volume that match your page. Open related ideas for gap topics you are not targeting yet.",
+        tip: "Intent badges are a simple guess from the words — confirm by looking at the SERP.",
+      },
+      serp: {
+        title: "SERP",
+        what: "SERP means the Google results page. This lists who currently ranks at the top for your keywords.",
+        do: "Study the competitors shown. Those are the pages you are competing against.",
+        tip: "Filled when you use Keyword position tracker / Check positions (paid).",
+      },
+      rank: {
+        title: "Rank check",
+        what: "Answers: “Where does MY website rank for this keyword right now?”",
+        do: "Position number = place in results. “Not ranking” = not in the top results we checked.",
+        tip: "This is Google ranking, not “where the word appears on your page.”",
+      },
+      rank_history: {
+        title: "Rank history",
+        what: "The same rank check repeated over time, with dates, so you can see movement.",
+        do: "Read each date’s result. “Not ranking” means you were missing from that SERP check — not a chart glitch.",
+        tip: "One check is not a trend yet. Run Check positions again on later days.",
+      },
+      backlinks: {
+        title: "Backlinks",
+        what: "Other websites that link to you. Links can help trust, but spammy links can hurt.",
+        do: "Look at the spam / risk labels. High risk domains are usually not helpful.",
+        tip: "Needs DataForSEO balance. A 402 / Payment Required error means top up the account, then try again.",
+      },
+      optimization: {
+        title: "Optimize advice",
+        what: "AI suggestions for better titles, meta descriptions, and H1 text.",
+        do: "Use Get optimize advice (or Include optimize on an audit), then Copy useful lines into your site.",
+        tip: "Advice only — it will not edit your website for you.",
+      },
+      keyword_plan: {
+        title: "Keyword placement",
+        what: "Checks your live page and tells you whether each keyword already appears in title, meta, headings, or body — and what is missing.",
+        do: "Click Get keyword placement (not Check positions). Read Present vs Missing for each keyword.",
+        tip: "Different from rank: this is about your page content, not Google position.",
+      },
+      login_wall: {
+        title: "Login wall",
+        what: "Checks whether the URL looks locked behind a login screen.",
+        do: "If it says a login wall is likely, a normal public crawl may miss private pages.",
+        tip: "For private pages, use Authenticated crawl with a real session cookie or token.",
+      },
+      crawl_auth: {
+        title: "Auth crawl",
+        what: "Shows whether this audit used your login cookie/headers to fetch pages.",
+        do: "Enable Authenticated crawl, paste cookie or Authorization header, then Run audit.",
+        tip: "Credentials stay in memory for that request only and are not saved.",
+      },
+      rendering: {
+        title: "Rendering",
+        what: "Some sites need JavaScript to show real content. This section says if we used a browser engine (Playwright) to read the page.",
+        do: "If the page looked empty without JS, rendering helps the audit see the real text.",
+        tip: "Modern app-style sites (SPAs) often need this.",
+      },
+      analyzers: {
+        title: "Analyzers",
+        what: "Each SEO check that ran on your crawl (title, links, schema, and so on).",
+        do: "Open a row to see the exact issues: severity, code, message, and page URL. Fix Critical first.",
+        tip: "This is the detailed view. Top issues is a short combined list of the worst findings.",
+      },
+      schedules: {
+        title: "Schedules",
+        what: "Automatic re-audits on a timer (for example every 24 hours).",
+        do: "Use Assign a recurring audit → Create schedule. Then Pause, Resume, or Delete in this panel. Run due now forces due jobs immediately.",
+        tip: "seo-api must stay running. Alerts need SEO_ALERT_WEBHOOK_URL (optional).",
+      },
+      share: {
+        title: "Report / share",
+        what: "Ways to download a PDF or create a public link to the report.",
+        do: "Run a saved audit first, then download the PDF or create a share link for a client.",
+        tip: "Share links are for sending results without giving full dashboard access.",
+      },
+      compare: {
+        title: "Compare audits",
+        what: "Compares two saved audits to show what changed.",
+        do: "You need at least two saved audits for the same site before compare is useful.",
+        tip: "Great for “before vs after we fixed issues.”",
+      },
+      rank_tracker: {
+        title: "Keyword position tracker",
+        what: "A switch to ask Google (via paid DataForSEO): where do you rank for these keywords?",
+        do: "Type keywords, turn on Activate position tracker, then click Check positions.",
+        tip: "This fills Rank check, SERP, and Rank history. It does NOT fill Keyword placement.",
+      },
+      keyword_plan_action: {
+        title: "Get keyword placement",
+        what: "Fetches your live page and maps keywords into on-page slots (title, meta, H1, body).",
+        do: "Enter target keywords, then click Get keyword placement. Watch the Keyword placement panel fill.",
+        tip: "Do not confuse with position tracker — that one is about Google rank.",
+      },
+      audit_options: {
+        title: "Audit options",
+        what: "Extra settings for the next Run audit: how many pages to crawl, PageSpeed, GA4, backlinks, and more.",
+        do: "Use Quick (3) / Standard (15) / Deep (50) presets. Turn PageSpeed On for mobile CWV. Turn on paid options only when funded.",
+        tip: "Backlinks and SERP cost DataForSEO money. Optimize advice needs an OpenAI key.",
+      },
+      status: {
+        title: "Status",
+        what: "Shown when there is no saved audit yet for this URL.",
+        do: "Set your options, then click Run audit with Save on.",
+        tip: "Load dashboard only shows results after at least one saved audit exists.",
+      },
+    };
+
+    function openHelp(key) {
+      const help = SECTION_HELP[key];
+      if (!help) return;
+      document.getElementById("helpTitle").textContent = help.title;
+      document.getElementById("helpWhat").textContent = help.what;
+      document.getElementById("helpDo").textContent = help.do;
+      document.getElementById("helpTip").textContent = help.tip;
+      document.getElementById("helpBackdrop").hidden = false;
+    }
+
+    function closeHelp() {
+      document.getElementById("helpBackdrop").hidden = true;
+    }
+
+    document.getElementById("helpClose").addEventListener("click", closeHelp);
+    document.getElementById("helpBackdrop").addEventListener("click", (e) => {
+      if (e.target.id === "helpBackdrop") closeHelp();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeHelp();
+    });
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".info-btn");
+      if (!btn) return;
+      e.preventDefault();
+      openHelp(btn.getAttribute("data-help"));
+    });
+
+    function panelHeadHtml(title, subtitle, helpKey) {
+      return `<div class="panel-head">
+        <div class="panel-head-left">
+          <h2>${esc(title)}</h2>
+          <button type="button" class="info-btn" data-help="${esc(helpKey)}" aria-label="What is ${esc(title)}?">i</button>
+        </div>
+        <span class="panel-sub">${esc(subtitle || "")}</span>
+      </div>`;
+    }
 
     async function loadGa4Options(preferred) {
       const gsc = document.getElementById("gsc").value.trim();
@@ -331,13 +1054,30 @@
         sel.innerHTML = '<option value="">— enter account_id first —</option>';
         return;
       }
+      if (!apiKeyInput.value.trim()) {
+        sel.innerHTML = '<option value="">— paste API key first —</option>';
+        document.getElementById("status").textContent =
+          "GA4 properties need SEO_API_KEY. Paste it in the API key field, then wait a second.";
+        return;
+      }
       sel.innerHTML = '<option value="">Loading properties…</option>';
       try {
-        const res = await fetch("/ga4/properties?account_id=" + encodeURIComponent(gsc));
+        const res = await fetch("/ga4/properties?account_id=" + encodeURIComponent(gsc), {
+          headers: apiHeaders(),
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
         const props = data.properties || [];
         const pref = preferred || data.preferred_ga4_property_id || initialGa4 || "";
+        if (!props.length) {
+          sel.innerHTML = '<option value="">— no properties (reconnect Google?) —</option>';
+          document.getElementById("status").textContent =
+            data.message ||
+            "No GA4 properties for this account_id. Open /auth/google/start?account_id=" +
+              encodeURIComponent(gsc) +
+              " to Connect Google.";
+          return;
+        }
         sel.innerHTML = '<option value="">— pick a property —</option>';
         props.forEach((p) => {
           const id = String(p.property_id || "");
@@ -348,6 +1088,8 @@
           sel.appendChild(opt);
         });
         if (pref && !sel.value) sel.value = pref;
+        document.getElementById("status").textContent =
+          props.length + " GA4 properties loaded.";
       } catch (ex) {
         sel.innerHTML = '<option value="">— could not load properties —</option>';
         document.getElementById("status").textContent = String(ex.message || ex);
@@ -377,7 +1119,7 @@
       try {
         const res = await fetch("/ga4/preference", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: apiHeaders(),
           body: JSON.stringify({ account_id: gsc, property_id: ga4 }),
         });
         const data = await res.json();
@@ -388,6 +1130,34 @@
         err.textContent = String(ex.message || ex);
         document.getElementById("status").textContent = "";
       }
+    });
+
+    document.querySelectorAll("[data-scope]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.getElementById("maxPages").value = btn.getAttribute("data-scope") || "15";
+      });
+    });
+
+    function syncRankTrackerUi() {
+      const on = document.getElementById("includeSerp").checked;
+      document.getElementById("rankTrackerCheckLabel").classList.toggle("on", on);
+    }
+    document.getElementById("includeSerp").addEventListener("change", syncRankTrackerUi);
+    syncRankTrackerUi();
+
+    document.getElementById("runRankCheck").addEventListener("click", () => {
+      const err = document.getElementById("error");
+      err.hidden = true;
+      const keywords = parseKeywords();
+      if (!keywords.length) {
+        err.hidden = false;
+        err.textContent = "Enter target keywords first (e.g. actoro, ai actor booking).";
+        document.getElementById("optKeywords").focus();
+        return;
+      }
+      document.getElementById("includeSerp").checked = true;
+      syncRankTrackerUi();
+      document.getElementById("runAudit").click();
     });
 
     function loadDashboard() {
@@ -430,7 +1200,7 @@
         throw new Error("Include GA4 needs Google account_id (and a saved/selected property).");
       }
       if (includeSerp && !keywords.length) {
-        throw new Error("Include SERP / rank needs target keywords.");
+        throw new Error("Keyword position tracker needs target keywords.");
       }
       if (useAuth) {
         const cookie = document.getElementById("authCookie").value.trim();
@@ -478,7 +1248,9 @@
       while (Date.now() - started < 10 * 60 * 1000) {
         statusEl.textContent = "Background job " + jobId + " — polling…";
         await new Promise((r) => setTimeout(r, 2000));
-        const res = await fetch("/jobs/" + encodeURIComponent(jobId));
+        const res = await fetch("/jobs/" + encodeURIComponent(jobId), {
+          headers: apiHeaders(),
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
         if (data.status === "failed" || data.status === "error") {
@@ -512,7 +1284,7 @@
       const bits = [];
       if (body.optimize) bits.push("optimize");
       if (body.pagespeed) bits.push("PageSpeed");
-      if (body.include_serp) bits.push("SERP");
+      if (body.include_serp) bits.push("position tracker");
       if (body.include_backlinks) bits.push("backlinks");
       if (body.include_ga4) bits.push("GA4");
       if (body.background) bits.push("background");
@@ -522,7 +1294,7 @@
       try {
         const res = await fetch("/audit", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: apiHeaders(),
           body: JSON.stringify(body),
         });
         const text = await res.text();
@@ -537,19 +1309,24 @@
 
         const id = data.audit_id || "";
         const score = data.score;
-        const pdf = id ? ("/report/" + id + "?format=pdf") : "";
+        const saved = body.save !== false;
+        const pdf = saved ? pdfHref(id) : "";
         result.hidden = false;
         result.innerHTML =
-          (body.save === false ? "Audit finished (not saved)" : "Audit saved") +
+          (saved ? "Audit saved" : "Audit finished (not saved)") +
           (id ? " · id <code>" + esc(id) + "</code>" : "") +
           (score != null ? " · score <strong>" + esc(score) + "</strong>" : "") +
-          (pdf ? ' · <a href="' + esc(pdf) + '">Download PDF</a>' : "");
+          (pdf
+            ? ' · <a href="' + esc(pdf) + '" target="_blank" rel="noopener">Download PDF</a>'
+            : (id && !saved
+              ? ' · <span class="muted">PDF needs Save checked (this run was not stored)</span>'
+              : ""));
         const qs = new URLSearchParams({ url: body.url });
         if (gsc) qs.set("gsc_account_id", gsc);
         if (ga4) qs.set("ga4_property_id", ga4);
         history.replaceState(null, "", "?" + qs.toString());
-        if (body.save === false) {
-          status.textContent = "Done (save was off — dashboard may still show the previous audit).";
+        if (!saved) {
+          status.textContent = "Done (save was off — dashboard/PDF still use the previous saved audit).";
         } else {
           status.textContent = "Reloading dashboard…";
           loadDashboard();
@@ -585,7 +1362,7 @@
       try {
         const res = await fetch("/optimize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: apiHeaders(),
           body: JSON.stringify({
             url,
             target_keywords: keywords,
@@ -626,6 +1403,113 @@
       }
     });
 
+    document.getElementById("createSchedule").addEventListener("click", async () => {
+      const url = document.getElementById("url").value.trim();
+      const hours = Math.max(1, Math.min(720, Number(document.getElementById("scheduleHours").value) || 24));
+      const gsc = document.getElementById("gsc").value.trim();
+      const maxPages = Math.max(1, Math.min(200, Number(document.getElementById("maxPages").value) || 15));
+      const err = document.getElementById("error");
+      const status = document.getElementById("status");
+      err.hidden = true;
+      if (!url) {
+        err.hidden = false;
+        err.textContent = "Enter a site URL first.";
+        return;
+      }
+      status.textContent = "Creating schedule…";
+      try {
+        const body = {
+          url,
+          every_hours: hours,
+          max_pages: maxPages,
+          pagespeed: document.getElementById("pagespeedMode").value === "true",
+        };
+        if (gsc) body.gsc_account_id = gsc;
+        const res = await fetch("/schedules", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+        status.textContent = "Schedule created · every " + hours + "h · id " + (data.schedule_id || data.id || "");
+        loadDashboard();
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        status.textContent = "";
+      }
+    });
+
+    document.getElementById("runDueSchedules").addEventListener("click", async () => {
+      const err = document.getElementById("error");
+      const status = document.getElementById("status");
+      err.hidden = true;
+      status.textContent = "Running due schedules…";
+      try {
+        const res = await fetch("/schedules/run-due", {
+          method: "POST",
+          headers: apiHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+        status.textContent = "Ran " + (data.ran ?? 0) + " due schedule(s).";
+        loadDashboard();
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        status.textContent = "";
+      }
+    });
+
+    document.getElementById("runKeywordPlan").addEventListener("click", async () => {
+      const url = document.getElementById("url").value.trim();
+      const keywords = parseKeywords();
+      const err = document.getElementById("error");
+      const status = document.getElementById("status");
+      const btn = document.getElementById("runKeywordPlan");
+      err.hidden = true;
+      if (!url) {
+        err.hidden = false;
+        err.textContent = "Enter a site URL first.";
+        return;
+      }
+      btn.disabled = true;
+      status.textContent = "Building keyword placement from live page…";
+      try {
+        const body = {
+          url,
+          target_keywords: keywords,
+        };
+        if (document.getElementById("useAuthCrawl").checked) {
+          body.use_authenticated_crawl = true;
+          const cookie = document.getElementById("authCookie").value.trim();
+          if (cookie) body.auth_cookie = cookie;
+          body.auth_headers = parseAuthHeaders();
+        }
+        const res = await fetch("/keyword-plan", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify(body),
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); }
+        catch { throw new Error(text.slice(0, 300) || ("HTTP " + res.status)); }
+        if (!res.ok) throw new Error(data.detail || data.message || ("HTTP " + res.status));
+        paintKeywordPlanSection(data);
+        status.textContent = data.status === "ok"
+          ? "Keyword placement ready (live page)."
+          : (data.disclaimer || data.message || "Keyword placement finished.");
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = String(ex.message || ex);
+        status.textContent = "";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     function paintOptimizationSection(data) {
       const content = document.getElementById("content");
       content.hidden = false;
@@ -634,13 +1518,31 @@
         panel = document.createElement("section");
         panel.className = "panel span-6";
         panel.id = "sec-optimization";
-        panel.innerHTML = "<h2>Optimize advice</h2><div class=\"body\"></div>";
+        panel.innerHTML = `${panelHeadHtml("Optimize advice", "Copy-ready rewrites", "optimization")}<div class="body"></div>`;
         content.prepend(panel);
       }
       panel.classList.remove("collapsed-opt");
       panel.hidden = false;
       const body = panel.querySelector(".body") || panel;
       renderOptimize(body, data);
+    }
+
+    function paintKeywordPlanSection(data) {
+      const content = document.getElementById("content");
+      content.hidden = false;
+      let panel = document.getElementById("sec-keyword_plan");
+      if (!panel) {
+        panel = document.createElement("section");
+        panel.className = "panel span-6";
+        panel.id = "sec-keyword_plan";
+        panel.innerHTML = `${panelHeadHtml("Keyword placement", "Where to use terms on-page", "keyword_plan")}<div class="body"></div>`;
+        content.prepend(panel);
+      }
+      panel.classList.remove("collapsed-opt", "span-3");
+      panel.classList.add("span-6");
+      panel.hidden = false;
+      const body = panel.querySelector(".body") || panel;
+      renderKeywordPlan(body, data);
     }
 
     // Opt-in / secondary panels — collapse when blank so the first viewport stays useful.
@@ -650,28 +1552,28 @@
     ]);
 
     const SECTIONS = [
-      ["audit", "Site audit", "span-4", renderAudit],
-      ["pagespeed", "PageSpeed / CWV", "span-4", renderPagespeed],
-      ["google_search_console", "Google Search Console", "span-4", renderGsc],
-      ["google_analytics", "Google Analytics (GA4)", "span-4", renderGa4],
-      ["trends", "Score trends", "span-6", renderTrends],
-      ["history", "Audit history", "span-6", renderHistory],
-      ["top_issues", "Top issues", "span-6", renderIssues],
-      ["recommendations", "Recommendations", "span-6", renderRecs],
-      ["keywords", "Keyword research", "span-4", renderKeywords],
-      ["serp", "SERP", "span-4", renderSerp],
-      ["rank", "Rank check", "span-4", renderRank],
-      ["rank_history", "Rank history", "span-6", renderRankHistory],
-      ["backlinks", "Backlinks", "span-6", renderBacklinks],
-      ["optimization", "Optimize advice", "span-6", renderOptimize],
-      ["keyword_plan", "Keyword placement", "span-3", renderSimple],
-      ["login_wall", "Login wall", "span-3", renderJsonish],
-      ["crawl_auth", "Auth crawl", "span-3", renderJsonish],
-      ["rendering", "Rendering", "span-6", renderJsonish],
-      ["analyzers", "Analyzers", "span-6", renderAnalyzers],
-      ["schedules", "Schedules", "span-6", renderSchedules],
-      ["share", "Report / share", "span-3", renderShare],
-      ["compare", "Compare audits", "span-3", renderCompare],
+      ["audit", "Site audit", "Latest score & crawl", "span-4", renderAudit],
+      ["pagespeed", "PageSpeed / CWV", "Lab vitals", "span-4", renderPagespeed],
+      ["google_search_console", "Search Console", "Queries & opportunities", "span-4", renderGsc],
+      ["google_analytics", "Google Analytics", "Traffic snapshot", "span-4", renderGa4],
+      ["trends", "Score trends", "Movement over time", "span-6", renderTrends],
+      ["history", "Audit history", "Saved runs", "span-6", renderHistory],
+      ["top_issues", "Top issues", "What to fix first", "span-6", renderIssues],
+      ["recommendations", "Recommendations", "Actionable next steps", "span-6", renderRecs],
+      ["keywords", "Keyword research", "Volume & difficulty", "span-4", renderKeywords],
+      ["serp", "SERP", "Who ranks today", "span-4", renderSerp],
+      ["rank", "Rank check", "Your keyword positions", "span-4", renderRank],
+      ["rank_history", "Rank history", "Positions over time", "span-6", renderRankHistory],
+      ["backlinks", "Backlinks", "Spam risk & referring domains", "span-6", renderBacklinks],
+      ["optimization", "Optimize advice", "Copy-ready rewrites", "span-6", renderOptimize],
+      ["keyword_plan", "Keyword placement", "Where to use terms on-page", "span-6", renderKeywordPlan],
+      ["login_wall", "Login wall", "Access probe", "span-3", renderJsonish],
+      ["crawl_auth", "Auth crawl", "Credentialed fetch", "span-3", renderJsonish],
+      ["rendering", "Rendering", "JS / Playwright", "span-6", renderJsonish],
+      ["analyzers", "Analyzers", "Drill into each check", "span-6", renderAnalyzers],
+      ["schedules", "Schedules", "Recurring audits", "span-6", renderSchedules],
+      ["share", "Report / share", "PDF & public link", "span-3", renderShare],
+      ["compare", "Compare audits", "Diff readiness", "span-3", renderCompare],
     ];
 
     document.getElementById("loadForm").addEventListener("submit", async (e) => {
@@ -744,7 +1646,7 @@
         rank_history: wrap(raw.rank_history, "No rank history"),
         backlinks: wrap(raw.backlinks, "No backlinks"),
         optimization: wrap(raw.optimization, "No optimize run"),
-        keyword_plan: wrap(raw.keyword_plan, "On-demand tool"),
+        keyword_plan: wrap(raw.keyword_plan, "Click Get keyword placement"),
         login_wall: wrap(raw.login_wall, "No login-wall data"),
         crawl_auth: wrap(raw.crawl_auth, "No auth crawl data"),
         rendering: wrap(raw.rendering, "No rendering data"),
@@ -778,15 +1680,20 @@
       if (data.status === "empty") {
         const note = document.createElement("section");
         note.className = "panel span-12";
-        note.innerHTML = `<h2>Status</h2><p class="blank">${esc(data.message || "No saved audits")}</p>`;
+        note.innerHTML = `${panelHeadHtml("Status", "Get started", "status")}
+          <div class="blank-box">
+            <p class="blank-title">No saved audit for this URL yet</p>
+            <p class="blank">${esc(data.message || "Set options above, then Run audit. The dashboard fills from the latest saved run.")}</p>
+          </div>`;
         root.appendChild(note);
       }
 
-      SECTIONS.forEach(([key, title, span, fn]) => {
+      SECTIONS.forEach(([key, title, subtitle, span, fn], idx) => {
         const section = document.createElement("section");
         section.id = "sec-" + key;
         section.className = "panel " + span;
-        section.innerHTML = `<h2>${title}</h2>`;
+        section.style.animationDelay = Math.min(idx * 0.03, 0.35) + "s";
+        section.innerHTML = panelHeadHtml(title, subtitle, key);
         const body = document.createElement("div");
         body.className = "body";
         const block = data[key] || { status: "blank", available: false, reason: "No data" };
@@ -796,12 +1703,13 @@
             section.classList.remove("span-4", "span-6");
             body.innerHTML = `<button type="button" class="opt-toggle">Not run — ${esc(block.reason || "opt-in on audit")}</button>`;
             body.querySelector(".opt-toggle").addEventListener("click", () => {
-              body.innerHTML = `<p class="blank">${esc(block.reason || "Blank")}</p>`;
+              body.innerHTML = emptyState(block.reason || "Blank", BLANK_HINTS[key] || "Enable this option on the next audit.");
               section.classList.remove("collapsed-opt");
               section.className = "panel " + span;
             });
           } else {
-            body.innerHTML = `<p class="blank">${esc(block.reason || "Blank")}</p>`;
+            const reason = friendlyPaidError(block.reason || "Blank");
+            body.innerHTML = emptyState(reason, BLANK_HINTS[key] || "");
           }
         } else {
           fn(body, block.data, data);
@@ -811,160 +1719,438 @@
       });
     }
 
+    const BLANK_HINTS = {
+      audit: "Run audit with Save on to populate this panel.",
+      pagespeed: "Turn PageSpeed On (or Auto) in audit options.",
+      google_search_console: "Connect Google and verify this site in Search Console.",
+      google_analytics: "Pick a GA4 property, Save default, then Include GA4 on audit.",
+      trends: "Need at least two saved audits for a trend line.",
+      history: "Saved audits appear here after you run with Save on.",
+      top_issues: "Issues appear after a successful crawl.",
+      recommendations: "Recommendations come from analyzers + GSC opportunities.",
+      keywords: "Use keyword research tools or include keywords on audit.",
+      serp: "Activate Keyword position tracker + enter target keywords, then Check positions.",
+      rank: "Activate Keyword position tracker + enter target keywords, then Check positions.",
+      rank_history: "Runs accumulate after position checks (Include SERP / Check positions).",
+      backlinks: "Opt in to Include backlinks (paid).",
+      optimization: "Check Optimize advice or use Get optimize advice.",
+      keyword_plan: "Click Get keyword placement (not Position tracker). Uses live page + optional target keywords.",
+      schedules: "Create a schedule via API to monitor this site.",
+      share: "Save an audit first, then download PDF or create a share link.",
+      compare: "Need two or more saved audits to compare.",
+    };
+
+    function emptyState(reason, hint) {
+      return `<div class="blank-box">
+        <p class="blank-title">${esc(reason || "No data")}</p>
+        ${hint ? `<p class="blank">${esc(hint)}</p>` : ""}
+      </div>`;
+    }
+
+    function scoreTone(score) {
+      const n = Number(score);
+      if (!Number.isFinite(n)) return { color: "var(--muted)", label: "—" };
+      if (n >= 80) return { color: "var(--good)", label: "Strong" };
+      if (n >= 60) return { color: "var(--warn)", label: "Needs work" };
+      return { color: "var(--bad)", label: "Critical" };
+    }
+
+    function sevClass(sev) {
+      const s = String(sev || "info").toLowerCase();
+      if (s.includes("crit")) return "critical";
+      if (s.includes("warn")) return "warning";
+      if (s.includes("ok") || s.includes("good")) return "ok";
+      return "info";
+    }
+
+    function copyText(text, btn) {
+      const val = String(text || "");
+      if (!val || val === "—") return;
+      navigator.clipboard.writeText(val).then(() => {
+        const prev = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(() => { btn.textContent = prev; }, 1200);
+      }).catch(() => {});
+    }
+
+    function wireCopyButtons(root) {
+      root.querySelectorAll("[data-copy]").forEach((btn) => {
+        btn.addEventListener("click", () => copyText(btn.getAttribute("data-copy"), btn));
+      });
+    }
+
     function renderAudit(el, d) {
+      const score = d.score;
+      const tone = scoreTone(score);
+      const sev = d.severity || {};
       el.innerHTML = `
-        <div class="score">${esc(d.score)}</div>
-        <p class="muted">${esc(d.pages)} pages · ${esc(d.issues)} issues · ${esc(d.created_at || "")}</p>
-        <p class="sev muted">
-          <strong>${esc((d.severity||{}).critical||0)}</strong> critical ·
-          <strong>${esc((d.severity||{}).warning||0)}</strong> warning ·
-          <strong>${esc((d.severity||{}).info||0)}</strong> info
-        </p>
-        <p class="muted"><code>${esc(d.audit_id||"")}</code></p>`;
+        <div class="score-row">
+          <div class="score-ring" style="--p:${Math.max(0, Math.min(100, Number(score) || 0))};--ring-color:${tone.color}">
+            <div class="score">${esc(score ?? "—")}</div>
+          </div>
+          <div class="score-meta">
+            <div class="kicker">${esc(tone.label)} health</div>
+            <p class="muted" style="margin:0">${esc(d.pages ?? 0)} pages crawled · ${esc(d.issues ?? 0)} issues</p>
+            <p class="muted" style="margin:0">${esc(d.created_at || "")}</p>
+          </div>
+        </div>
+        <div class="metrics">
+          <div class="metric bad"><div class="n">${esc(sev.critical || 0)}</div><div class="l">Critical</div></div>
+          <div class="metric warn"><div class="n">${esc(sev.warning || 0)}</div><div class="l">Warning</div></div>
+          <div class="metric"><div class="n">${esc(sev.info || 0)}</div><div class="l">Info</div></div>
+        </div>
+        <p class="muted"><code>${esc(d.audit_id || "")}</code></p>`;
     }
 
     function renderPagespeed(el, d) {
-      const lab = (d.strategies && d.strategies[0] && d.strategies[0].lab) || d.lab || {};
-      const strat = (d.strategies && d.strategies[0] && d.strategies[0].strategy) || d.strategy || "";
+      const strategies = d.strategies || [];
+      const blocks = strategies.length
+        ? strategies
+        : [{ strategy: d.strategy || "mobile", lab: d.lab || {} }];
+      const html = blocks.map((s) => {
+        const lab = s.lab || {};
+        const perf = lab.performance_score;
+        const tone = scoreTone(perf);
+        return `
+          <div style="margin-bottom:0.85rem">
+            <p class="muted" style="margin:0 0 0.35rem;text-transform:uppercase;letter-spacing:0.06em;font-size:0.7rem;font-weight:700">${esc(s.strategy || "mobile")}</p>
+            <div class="psi-row">
+              <div class="psi-chip">Perf <strong style="color:${tone.color}">${esc(perf ?? "—")}</strong></div>
+              <div class="psi-chip">LCP <strong>${esc(lab.lcp_ms ?? "—")}</strong> ms</div>
+              <div class="psi-chip">CLS <strong>${esc(lab.cls ?? "—")}</strong></div>
+              <div class="psi-chip">INP <strong>${esc(lab.inp_ms ?? "—")}</strong> ms</div>
+            </div>
+          </div>`;
+      }).join("");
+      const issues = (d.issues || []).slice(0, 5).map((i) => {
+        const sev = sevClass(i.severity);
+        return `<div class="issue-row">
+          <div class="issue-bar ${sev}"></div>
+          <div>
+            <div class="issue-code"><span class="sev-pill ${sev}">${esc(i.severity || "warning")}</span>${esc(i.code || "")}</div>
+            <div>${esc(i.message || "")}</div>
+          </div>
+        </div>`;
+      }).join("");
       el.innerHTML = `
-        <p><strong>${esc(lab.performance_score ?? "—")}</strong> / 100 ${strat ? "· " + esc(strat) : ""}</p>
-        <p class="muted">LCP ${esc(lab.lcp_ms ?? "—")}ms · CLS ${esc(lab.cls ?? "—")} · INP ${esc(lab.inp_ms ?? "—")}ms</p>
-        <p class="muted">Status: ${esc(d.status || "ok")}</p>`;
+        <p class="muted" style="margin-top:0">Status: ${esc(d.status || "ok")}</p>
+        ${html}
+        ${issues ? `<div class="list-block"><div class="lb-title">PSI findings</div>${issues}</div>` : ""}`;
     }
 
     function renderGsc(el, d) {
       const sites = d.sites || [];
+      const snap = d.snapshot || {};
+      const queries = snap.top_queries || [];
+      const pages = snap.top_pages || [];
+      const oppRows = snap.opportunities || [];
+      const opps = snap.opportunity_count ?? oppRows.length;
+      const period = snap.period || {};
+      const clicks = queries.reduce((a, q) => a + (Number(q.clicks) || 0), 0);
+      const impr = queries.reduce((a, q) => a + (Number(q.impressions) || 0), 0);
       const matchLine = d.matches_audit_url
-        ? `<p class="ok-line">Matches this site: <code>${esc(d.matched_site_url || "")}</code></p>`
+        ? `<p class="ok-line">Matched property <code>${esc(d.matched_site_url || "")}</code></p>`
         : (d.seed_url || d.message)
           ? `<p class="warn-line">${esc(d.message || ("No Search Console property matches " + (d.seed_url || "this URL")))}</p>`
           : "";
-      if (sites.length || d.matches_audit_url === false) {
-        const snap = d.snapshot || {};
-        const opps = snap.opportunity_count ?? (snap.opportunities || []).length;
-        const oppLine = d.matches_audit_url && opps != null
-          ? `<p>${esc(opps)} opportunities · top query: ${esc(((snap.top_queries||[{}])[0]||{}).query || "—")}</p>`
+      const periodLine = period.start
+        ? `<p class="muted">Period ${esc(period.start)} → ${esc(period.end)} (${esc(period.days || 28)}d)${d.snapshot_source ? " · " + esc(d.snapshot_source) : ""}</p>`
+        : "";
+      const metrics = (d.matches_audit_url || snap.site_url)
+        ? `<div class="metrics">
+            <div class="metric"><div class="n">${esc(opps)}</div><div class="l">Opps</div></div>
+            <div class="metric"><div class="n">${esc(clicks || "—")}</div><div class="l">Top-q clicks</div></div>
+            <div class="metric"><div class="n">${esc(impr || "—")}</div><div class="l">Top-q impr</div></div>
+          </div>`
+        : "";
+      const queryList = queries.length
+        ? `<div class="list-block"><div class="lb-title">Top queries</div><ul class="clean">${queries.slice(0, 8).map((q) =>
+            `<li><strong>${esc(q.query || "")}</strong><br><span class="muted">clicks ${esc(q.clicks ?? "—")} · impr ${esc(q.impressions ?? "—")} · pos ${esc(q.position ?? "—")}</span></li>`
+          ).join("")}</ul></div>`
+        : (d.matches_audit_url || d.status === "ok")
+          ? `<p class="muted">No queries in this period.</p>`
           : "";
-        el.innerHTML = `
-          <p class="muted">${esc(d.email || d.account_id || "")} · ${esc(d.site_count || sites.length || 0)} verified properties</p>
-          ${matchLine}
-          ${oppLine}
-          <ul>${sites.slice(0,8).map(s => `<li><code>${esc(s.site_url || s)}</code></li>`).join("")}</ul>
-          ${!d.matches_audit_url ? `<p class="muted">GSC data for this audit stays empty until the site is verified in Search Console.</p>` : ""}`;
-        return;
-      }
-      const snap = d.snapshot || {};
+      const pageList = pages.length
+        ? `<div class="list-block"><div class="lb-title">Top pages</div><ul class="clean">${pages.slice(0, 5).map((p) =>
+            `<li><code>${esc(p.page || "")}</code><br><span class="muted">clicks ${esc(p.clicks ?? "—")} · impr ${esc(p.impressions ?? "—")}</span></li>`
+          ).join("")}</ul></div>`
+        : "";
+      const oppList = oppRows.length
+        ? `<div class="list-block"><div class="lb-title">Opportunities</div><ul class="clean">${oppRows.slice(0, 5).map((o) =>
+            `<li><span class="sev-pill warning">${esc(o.kind || "page2")}</span><strong>${esc(o.query || "")}</strong><br><span class="muted"><code>${esc(o.page || "")}</code> · pos ${esc(o.position ?? "—")} · impr ${esc(o.impressions ?? "—")}</span></li>`
+          ).join("")}</ul></div>`
+        : "";
+      const siteList = sites.length
+        ? `<div class="list-block"><div class="lb-title">Verified properties</div><ul class="clean">${sites.slice(0, 6).map((s) =>
+            `<li><code>${esc(s.site_url || s)}</code></li>`
+          ).join("")}</ul></div>`
+        : "";
       el.innerHTML = `
-        ${matchLine}
-        <p class="muted">${esc(d.matched_site_url || d.status || "")}</p>
-        <p>${esc(snap.opportunity_count ?? (snap.opportunities||[]).length)} opportunities</p>
-        <p class="muted">Top query: ${esc(((snap.top_queries||[{}])[0]||{}).query || "—")}</p>`;
+        <p class="muted" style="margin-top:0">${esc(d.email || d.account_id || "")}${d.site_count || sites.length ? " · " + esc(d.site_count || sites.length) + " properties" : ""}</p>
+        ${matchLine}${periodLine}${metrics}${queryList}${pageList}${oppList}${siteList}
+        ${!d.matches_audit_url && sites.length ? `<p class="muted">GSC stays empty for this audit until the site is verified.</p>` : ""}
+        ${d.message && (d.matches_audit_url || d.status === "ok") ? `<p class="muted">${esc(d.message)}</p>` : ""}`;
     }
 
     function renderGa4(el, d) {
       const snap = d.snapshot || (d.totals ? d : null);
       if (snap && (d.property_id || snap.property_id)) {
         const totals = snap.totals || {};
+        const sessions = Number(totals.sessions) || 0;
+        const users = Number(totals.total_users) || 0;
+        const views = Number(totals.screen_page_views) || 0;
+        const top = (snap.top_pages || [])[0];
         const prefNote = d.used_saved_preference
-          ? " · using saved default"
-          : (d.preferred_ga4_property_id ? " · default saved" : "");
+          ? " · saved default"
+          : (d.preferred_ga4_property_id ? " · default on file" : "");
+        const periodLine = snap.start_date
+          ? `<p class="muted">Period ${esc(snap.start_date)} → ${esc(snap.end_date)} (${esc(snap.days || 28)}d)</p>`
+          : "";
+        let narrative = "";
+        if (sessions <= 0 && users <= 0) {
+          narrative = "So what: almost no measurable traffic in this window — fix discovery (Search Console + content) before optimizing conversions.";
+        } else if (top) {
+          const share = views > 0 ? Math.round((Number(top.screen_page_views) || 0) / views * 100) : null;
+          narrative =
+            `So what: ~${sessions} visits from ~${users} people` +
+            (share != null
+              ? `; top path <code>${esc(top.page_path || "/")}</code> is ~${share}% of views — prioritize SEO fixes there first.`
+              : "; focus SEO fixes on the top pages listed below.");
+        } else {
+          narrative = `So what: ~${sessions} sessions / ~${users} users in range — enough to prioritize on-page fixes on crawled URLs.`;
+        }
+        // Never invent revenue — only mention if present in totals
+        if (totals.purchaseRevenue != null || totals.conversions != null) {
+          narrative += ` Recorded conversions/revenue signal present in GA4 totals (verify in Analytics UI).`;
+        } else {
+          narrative += ` No conversion/revenue fields in this snapshot — we will not invent a money figure.`;
+        }
         el.innerHTML = `
-          <p class="muted">Property <code>${esc(d.property_id || snap.property_id || "")}</code>${esc(prefNote)}</p>
-          <p><strong>${esc(totals.sessions ?? 0)}</strong> sessions ·
-             <strong>${esc(totals.total_users ?? 0)}</strong> users ·
-             <strong>${esc(totals.screen_page_views ?? 0)}</strong> views</p>
-          <p class="muted">${esc(snap.message || (d.has_data === false ? "No traffic in range" : ""))}</p>
-          <ul>${(snap.top_pages||[]).slice(0,5).map(p =>
-            `<li><code>${esc(p.page_path||"")}</code> · ${esc(p.screen_page_views??0)} views</li>`
-          ).join("")}</ul>`;
+          <p class="muted" style="margin-top:0">Property <code>${esc(d.property_id || snap.property_id || "")}</code>${esc(prefNote)}</p>
+          ${periodLine}
+          <div class="metrics">
+            <div class="metric good"><div class="n">${esc(sessions)}</div><div class="l">Sessions</div></div>
+            <div class="metric"><div class="n">${esc(users)}</div><div class="l">Users</div></div>
+            <div class="metric"><div class="n">${esc(views)}</div><div class="l">Views</div></div>
+          </div>
+          <p class="ok-line">${narrative}</p>
+          ${snap.message || d.has_data === false ? `<p class="muted">${esc(snap.message || "No traffic in range")}</p>` : ""}
+          <div class="list-block"><div class="lb-title">Top pages</div>
+            <ul class="clean">${(snap.top_pages || []).slice(0, 8).map((p) =>
+              `<li><code>${esc(p.page_path || "")}</code><br><span class="muted">${esc(p.screen_page_views ?? 0)} views · ${esc(p.sessions ?? 0)} sessions</span></li>`
+            ).join("") || "<li class='muted'>No page rows</li>"}</ul>
+          </div>`;
         if (d.properties && d.properties.length) {
-          const pref = d.preferred_ga4_property_id || d.property_id;
-          loadGa4Options(pref);
+          loadGa4Options(d.preferred_ga4_property_id || d.property_id);
         }
         return;
       }
       if (d.properties) {
-        el.innerHTML = `<p class="muted">${esc(d.email || d.account_id || "")} · ${esc(d.property_count||0)} GA4 properties</p>
-          <p class="muted">${esc(d.hint || "Pick a property above and Save GA4 default")}</p>
-          <ul>${(d.properties||[]).slice(0,8).map(p =>
-            `<li><code>${esc(p.property_id)}</code> ${esc(p.display_name||"")}</li>`
+        el.innerHTML = `
+          <p class="muted" style="margin-top:0">${esc(d.email || d.account_id || "")} · ${esc(d.property_count || 0)} properties</p>
+          <div class="blank-box" style="margin-bottom:0.75rem">
+            <p class="blank-title">Pick a property above</p>
+            <p class="blank">${esc(d.hint || "Choose a GA4 property, Save GA4 default, then Include GA4 on the next audit.")}</p>
+          </div>
+          <ul class="clean">${(d.properties || []).slice(0, 8).map((p) =>
+            `<li><code>${esc(p.property_id)}</code> ${esc(p.display_name || "")}</li>`
           ).join("")}</ul>`;
         loadGa4Options(d.preferred_ga4_property_id);
         return;
       }
-      el.innerHTML = `<p class="blank">No GA4 data</p>`;
+      el.innerHTML = emptyState("No GA4 data", BLANK_HINTS.google_analytics);
     }
 
     function renderTrends(el, d) {
       const points = d.points || [];
+      if (!points.length) {
+        el.innerHTML = emptyState(d.message || "No trend points", BLANK_HINTS.trends);
+        return;
+      }
       const chart = document.createElement("div");
       chart.className = "chart";
-      const max = Math.max(...points.map(p => Number(p.score)||0), 1);
-      points.forEach(p => {
+      const max = Math.max(...points.map((p) => Number(p.score) || 0), 1);
+      points.forEach((p) => {
         const bar = document.createElement("div");
         bar.className = "bar";
-        bar.style.height = Math.max(4, Math.round((Number(p.score)/max)*100)) + "px";
+        bar.style.height = Math.max(6, Math.round((Number(p.score) / max) * 100)) + "px";
         const span = document.createElement("span");
         span.textContent = String(Math.round(Number(p.score)));
+        bar.title = (p.created_at || "") + " · " + p.score;
         bar.appendChild(span);
         chart.appendChild(bar);
       });
       el.appendChild(chart);
+      const delta = d.score_delta;
       const meta = document.createElement("p");
       meta.className = "muted";
-      meta.textContent = d.score_delta == null ? (d.message || "") : `Delta: ${d.score_delta > 0 ? "+" : ""}${d.score_delta}`;
+      if (delta == null) {
+        meta.textContent = d.message || (points.length + " saved scores");
+      } else if (delta > 0) {
+        meta.innerHTML = `<span class="delta-up">+${esc(delta)}</span> since previous · ${esc(points.length)} points`;
+      } else if (delta < 0) {
+        meta.innerHTML = `<span class="delta-down">${esc(delta)}</span> since previous · ${esc(points.length)} points`;
+      } else {
+        meta.innerHTML = `<span class="delta-flat">Flat</span> · ${esc(points.length)} points`;
+      }
       el.appendChild(meta);
     }
 
     function renderHistory(el, d) {
       const rows = Array.isArray(d) ? d : [];
+      if (!rows.length) {
+        el.innerHTML = emptyState("No history", BLANK_HINTS.history);
+        return;
+      }
       el.innerHTML = `<table><thead><tr><th>When</th><th>Score</th><th>Issues</th></tr></thead><tbody>
-        ${rows.slice(0,12).map(r => `<tr><td>${esc(r.created_at||"")}</td><td>${esc(r.score)}</td><td>${esc(r.issues)}</td></tr>`).join("")}
+        ${rows.slice(0, 12).map((r) => {
+          const tone = scoreTone(r.score);
+          return `<tr>
+            <td>${esc(r.created_at || "")}</td>
+            <td><strong style="color:${tone.color}">${esc(r.score)}</strong></td>
+            <td>${esc(r.issues)}</td>
+          </tr>`;
+        }).join("")}
       </tbody></table>`;
     }
 
     function renderIssues(el, d) {
       const rows = Array.isArray(d) ? d : [];
-      el.innerHTML = `<ul>${rows.slice(0,12).map(i =>
-        `<li><code>${esc(i.severity)}</code> <code>${esc(i.code)}</code> — ${esc(i.message)}</li>`
-      ).join("")}</ul>`;
+      if (!rows.length) {
+        el.innerHTML = emptyState("No issues listed", "A clean crawl or an empty issue list.");
+        return;
+      }
+      el.innerHTML = rows.slice(0, 12).map((i) => {
+        const sev = sevClass(i.severity);
+        const ev = i.url ? `<div class="muted" style="margin-top:0.2rem"><code>${esc(i.url)}</code></div>` : "";
+        return `<div class="issue-row">
+          <div class="issue-bar ${sev}"></div>
+          <div>
+            <div class="issue-code"><span class="sev-pill ${sev}">${esc(i.severity || "")}</span>${esc(i.code || "")}</div>
+            <div>${esc(i.message || "")}</div>
+            ${ev}
+          </div>
+        </div>`;
+      }).join("");
     }
 
     function renderRecs(el, d) {
       const opps = d.opportunities || [];
-      if (opps.length) {
-        el.innerHTML = `<ul>${opps.slice(0,12).map(o =>
-          `<li><code>${esc(o.code||"")}</code> — ${esc(o.message||"")}</li>`
-        ).join("")}</ul>`;
+      const pages = d.pages || [];
+      const actions = opps.length
+        ? opps
+        : pages.flatMap((p) =>
+            (p.actions || []).map((a) => Object.assign({ url: p.url }, a))
+          );
+      if (actions.length) {
+        el.innerHTML = `<div class="metrics" style="margin-top:0">
+            <div class="metric"><div class="n">${esc(actions.length)}</div><div class="l">Actions</div></div>
+          </div>` + actions.slice(0, 14).map((o) => {
+          const sev = sevClass(o.severity || "info");
+          const ev = o.evidence || {};
+          const current = ev.current_value ?? o.current_value;
+          const suggested = ev.suggested_value ?? o.suggested_value;
+          const url = ev.url || o.url || o.page || "";
+          const evidenceBits = [
+            url ? `<code>${esc(url)}</code>` : "",
+            ev.field ? `field <code>${esc(ev.field)}</code>` : "",
+            current != null && current !== "" ? `now: ${esc(String(current).slice(0, 120))}` : "",
+            suggested != null && suggested !== "" ? `use: ${esc(String(suggested).slice(0, 120))}` : "",
+          ].filter(Boolean).join(" · ");
+          return `<div class="issue-row">
+            <div class="issue-bar ${sev}"></div>
+            <div>
+              <div class="issue-code">${esc(o.code || "recommendation")}</div>
+              <div>${esc(o.message || "")}</div>
+              ${evidenceBits ? `<div class="muted" style="margin-top:0.25rem">${evidenceBits}</div>` : ""}
+            </div>
+          </div>`;
+        }).join("");
         return;
       }
-      el.innerHTML = `<p class="muted">${esc(d.count||0)} recommendation page(s)</p>`;
+      el.innerHTML = `<p class="muted">${esc(d.count || 0)} recommendation page(s) on file — open a full audit report for detail.</p>`;
+    }
+
+    function keywordIntent(kw) {
+      const s = String(kw || "").toLowerCase();
+      if (!s) return null;
+      if (/\b(buy|price|pricing|cost|cheap|deal|order|book|subscribe|near me)\b/.test(s)) {
+        return { label: "transactional", sev: "ok", tip: "Likely ready-to-act search — good for conversion pages." };
+      }
+      if (/\b(how|what|why|guide|learn|tutorial|vs|versus|meaning)\b/.test(s)) {
+        return { label: "informational", sev: "info", tip: "Learning intent — fit for guides/blog, not hard sell." };
+      }
+      if (s.split(/\s+/).length <= 2) {
+        return { label: "navigational?", sev: "warning", tip: "May be brand/name search — check SERP before chasing volume." };
+      }
+      return { label: "mixed/unclear", sev: "info", tip: "Intent unclear from the phrase alone — use SERP to confirm." };
     }
 
     function renderKeywords(el, d) {
       const metrics = d.metrics || d.research?.keywords || d.keywords || [];
-      if (!Array.isArray(metrics) || !metrics.length) {
+      const related = d.related || d.research?.related || [];
+      if ((!Array.isArray(metrics) || !metrics.length) && !related.length) {
         el.innerHTML = `<p class="muted">${esc(d.status || d.message || "Present")}</p>`;
         return;
       }
-      el.innerHTML = `<table><thead><tr><th>Keyword</th><th>Vol</th><th>KD</th></tr></thead><tbody>
-        ${metrics.slice(0,8).map(k => `<tr><td>${esc(k.keyword||"")}</td><td>${esc(k.search_volume??"—")}</td><td>${esc(k.keyword_difficulty??"—")}</td></tr>`).join("")}
-      </tbody></table>`;
+      const real = d.is_real_research === true
+        ? '<span class="sev-pill ok">live DataForSEO</span>'
+        : (d.is_real_research === false ? '<span class="sev-pill warning">not live</span>' : "");
+      const table = (Array.isArray(metrics) && metrics.length)
+        ? `<table><thead><tr><th>Keyword</th><th>Vol</th><th>KD</th><th>CPC</th><th>Comp</th><th>Intent</th></tr></thead><tbody>
+          ${metrics.slice(0, 12).map((k) => {
+            const intent = keywordIntent(k.keyword);
+            return `<tr>
+              <td><strong>${esc(k.keyword || "")}</strong></td>
+              <td>${esc(k.search_volume ?? "—")}</td>
+              <td>${esc(k.keyword_difficulty ?? "—")}</td>
+              <td>${esc(k.cpc ?? k.average_cpc ?? "—")}</td>
+              <td>${esc(k.competition ?? k.competition_index ?? "—")}</td>
+              <td>${intent ? `<span class="sev-pill ${intent.sev}" title="${esc(intent.tip)}">${esc(intent.label)}</span>` : "—"}</td>
+            </tr>`;
+          }).join("")}
+        </tbody></table>`
+        : "";
+      const relatedBlock = (Array.isArray(related) && related.length)
+        ? `<div class="list-block"><div class="lb-title">Related / gap ideas</div>
+            <ul class="clean">${related.slice(0, 12).map((r) => {
+              const kw = r.keyword || r;
+              const kids = (r.related_keywords || []).slice(0, 4).join(", ");
+              return `<li><strong>${esc(kw)}</strong>
+                ${r.search_volume != null ? ` · vol ${esc(r.search_volume)}` : ""}
+                ${r.cpc != null ? ` · CPC ${esc(r.cpc)}` : ""}
+                ${r.keyword_difficulty != null ? ` · KD ${esc(r.keyword_difficulty)}` : ""}
+                ${kids ? `<br><span class="muted">also: ${esc(kids)}</span>` : ""}
+              </li>`;
+            }).join("")}</ul></div>`
+        : "";
+      el.innerHTML = `
+        <p class="muted" style="margin-top:0">${real} ${esc(d.message || "")}</p>
+        ${table}
+        ${relatedBlock}
+        <p class="muted">Intent is a light hint from the phrase (not Google’s official label). Confirm with SERP.</p>`;
     }
 
     function renderSerp(el, d) {
       const organic = d.organic || [];
       if (organic.length) {
-        el.innerHTML = `<ul>${organic.slice(0,8).map(o =>
-          `<li>#${esc(o.rank_group)} <code>${esc(o.domain)}</code> — ${esc(o.title||"")}</li>`
+        el.innerHTML = `<ul class="clean">${organic.slice(0, 10).map((o) =>
+          `<li><span class="sev-pill info">#${esc(o.rank_group)}</span><strong>${esc(o.domain)}</strong><br><span class="muted">${esc(o.title || "")}</span></li>`
         ).join("")}</ul>`;
         return;
       }
       const checks = d.checks || [];
       if (checks.length) {
-        el.innerHTML = `<p class="muted">${esc(d.message||"")}</p><ul>${checks.map(c =>
-          `<li>${esc(c.keyword)} — ${(c.rank&&c.rank.found) ? "pos "+esc(c.rank.position) : "not in top"}</li>`
-        ).join("")}</ul>`;
+        el.innerHTML = `<p class="muted" style="margin-top:0">${esc(d.message || "")}</p><ul class="clean">${checks.map((c) => {
+          const rank = c.rank || {};
+          const line = rank.found
+            ? `pos ${esc(rank.position)}${rank.url ? " · " + esc(rank.url) : ""}`
+            : "not in top results";
+          const comps = (c.top_organic || []).slice(0, 3).map((o) =>
+            `<div class="muted" style="margin-top:0.25rem">#${esc(o.rank_group)} <code>${esc(o.domain)}</code> — ${esc(o.title || "")}</div>`
+          ).join("");
+          return `<li><strong>${esc(c.keyword)}</strong> — ${line}${comps}</li>`;
+        }).join("")}</ul>`;
         return;
       }
       el.innerHTML = `<p class="muted">${esc(d.message || "SERP payload")}</p>`;
@@ -972,9 +2158,24 @@
 
     function renderRank(el, d) {
       const rows = Array.isArray(d) ? d : [];
-      el.innerHTML = `<ul>${rows.map(r => {
+      if (!rows.length) {
+        el.innerHTML = emptyState("No rank rows", BLANK_HINTS.rank);
+        return;
+      }
+      el.innerHTML = `<ul class="clean">${rows.map((r) => {
         const rank = r.rank || {};
-        return `<li><strong>${esc(r.keyword)}</strong> — ${rank.found ? "position "+esc(rank.position) : esc(r.message||"not found")}</li>`;
+        const found = rank.found;
+        const label = found
+          ? `Position ${esc(rank.position)} on Google (in checked results)`
+          : "Not in the top results we checked — your site did not appear yet for this keyword";
+        return `<li>
+          <strong>${esc(r.keyword)}</strong>
+          ${found
+            ? ` <span class="sev-pill ok">pos ${esc(rank.position)}</span>`
+            : ` <span class="sev-pill warning">not ranking</span>`}
+          <br><span class="muted">${label}</span>
+          ${rank.url ? `<br><span class="muted"><code>${esc(rank.url)}</code></span>` : ""}
+        </li>`;
       }).join("")}</ul>`;
     }
 
@@ -982,7 +2183,7 @@
       const series = d.series || {};
       const keys = Object.keys(series);
       if (!keys.length) {
-        el.innerHTML = `<p class="muted">${esc(d.message || "No snapshots")}</p>`;
+        el.innerHTML = emptyState(d.message || "No snapshots", BLANK_HINTS.rank_history);
         return;
       }
       el.innerHTML = keys.slice(0, 6).map((kw) => {
@@ -992,91 +2193,367 @@
         const delta = (last.position != null && first.position != null)
           ? (Number(first.position) - Number(last.position))
           : null;
-        const trail = pts.slice(-8).map((p) =>
-          p.found ? String(p.position ?? "—") : "—"
-        ).join(" → ");
-        return `<div style="margin-bottom:0.75rem;">
-          <p><strong>${esc(kw)}</strong>
-            ${delta == null ? "" : (delta > 0 ? ` · improved ${esc(delta)}` : delta < 0 ? ` · dropped ${esc(-delta)}` : " · flat")}
-          </p>
-          <p class="muted">${esc(trail)} · ${esc(pts.length)} checks</p>
+        const trail = pts.slice(-8).map((p) => {
+          const when = (p.checked_at || "").toString().slice(0, 10);
+          const pos = p.found ? String(p.position ?? "—") : "not ranking";
+          return when ? `${when}: ${pos}` : pos;
+        }).join(" → ");
+        let deltaHtml = "";
+        if (delta == null) {
+          deltaHtml = pts.every((p) => !p.found)
+            ? `<span class="delta-flat">never found in checked results</span>`
+            : "";
+        } else if (delta > 0) deltaHtml = `<span class="delta-up">improved ${esc(delta)} spots</span>`;
+        else if (delta < 0) deltaHtml = `<span class="delta-down">dropped ${esc(-delta)} spots</span>`;
+        else deltaHtml = `<span class="delta-flat">flat</span>`;
+        return `<div class="opt-card">
+          <p style="margin:0 0 0.35rem"><strong>${esc(kw)}</strong> ${deltaHtml}</p>
+          <p class="muted" style="margin:0">${esc(trail)} · ${esc(pts.length)} check${pts.length === 1 ? "" : "s"}</p>
+          <p class="muted" style="margin:0.35rem 0 0">Dashes / “not ranking” mean the site was not in the SERP slice we pulled that day.</p>
         </div>`;
       }).join("");
     }
 
+    function spamRisk(score) {
+      if (score == null || score === "") return { label: "unknown", sev: "info", n: null };
+      const n = Number(score);
+      if (!Number.isFinite(n)) return { label: "unknown", sev: "info", n: null };
+      if (n >= 60) return { label: "high risk", sev: "critical", n };
+      if (n >= 30) return { label: "elevated", sev: "warning", n };
+      return { label: "low risk", sev: "ok", n };
+    }
+
     function renderBacklinks(el, d) {
       const sum = d.summary || d;
+      const info = sum.info || {};
       const refs = d.top_referring_domains || [];
+      const targetSpam = spamRisk(info.target_spam_score);
+      const scored = refs
+        .map((r) => spamRisk(r.backlinks_spam_score))
+        .filter((r) => r.n != null);
+      const high = scored.filter((r) => r.n >= 60).length;
+      const elevated = scored.filter((r) => r.n >= 30 && r.n < 60).length;
+      const avg = scored.length
+        ? Math.round(scored.reduce((a, r) => a + r.n, 0) / scored.length)
+        : null;
+      const verdict = high
+        ? `<p class="warn-line">${esc(high)} referring domain(s) look spammy (spam score ≥ 60) — treat as risk, not authority.</p>`
+        : elevated
+          ? `<p class="warn-line">${esc(elevated)} referring domain(s) have elevated spam scores (30–59).</p>`
+          : scored.length
+            ? `<p class="ok-line">Referring domains look relatively clean on spam score (all &lt; 30).</p>`
+            : `<p class="muted">No spam scores in this snapshot.</p>`;
       el.innerHTML = `
-        <p><strong>${esc(sum.backlinks ?? "—")}</strong> backlinks · <strong>${esc(sum.referring_domains ?? "—")}</strong> domains</p>
-        <ul>${refs.slice(0,8).map(r => `<li><code>${esc(r.domain)}</code> — ${esc(r.backlinks)} links</li>`).join("")}</ul>`;
+        <p class="muted" style="margin-top:0">Target <code>${esc(d.target || sum.target || "")}</code>
+          ${d.is_real_research ? '<span class="sev-pill ok">live DataForSEO</span>' : ""}</p>
+        <div class="metrics">
+          <div class="metric"><div class="n">${esc(sum.backlinks ?? "—")}</div><div class="l">Backlinks</div></div>
+          <div class="metric"><div class="n">${esc(sum.referring_domains ?? "—")}</div><div class="l">Domains</div></div>
+          <div class="metric"><div class="n">${esc(sum.rank ?? "—")}</div><div class="l">DFS rank</div></div>
+          <div class="metric ${targetSpam.sev === "critical" || targetSpam.sev === "warning" ? (targetSpam.sev === "critical" ? "bad" : "warn") : ""}">
+            <div class="n">${esc(info.target_spam_score ?? "—")}</div><div class="l">Target spam</div>
+          </div>
+          <div class="metric ${high ? "bad" : elevated ? "warn" : ""}">
+            <div class="n">${esc(avg ?? "—")}</div><div class="l">Avg ref spam</div>
+          </div>
+          <div class="metric"><div class="n">${esc(sum.broken_backlinks ?? 0)}</div><div class="l">Broken</div></div>
+        </div>
+        ${verdict}
+        <div class="list-block"><div class="lb-title">Referring domains — help or hurt?</div>
+          <table><thead><tr>
+            <th>Domain</th><th>Links</th><th>Spam</th><th>Risk</th><th>DFS rank</th><th>First seen</th>
+          </tr></thead><tbody>
+          ${refs.slice(0, 12).map((r) => {
+            const risk = spamRisk(r.backlinks_spam_score);
+            return `<tr>
+              <td><code>${esc(r.domain)}</code></td>
+              <td>${esc(r.backlinks ?? "—")}</td>
+              <td>${esc(risk.n ?? "—")}</td>
+              <td><span class="sev-pill ${risk.sev}">${esc(risk.label)}</span></td>
+              <td>${esc(r.rank ?? "—")}</td>
+              <td class="muted">${esc((r.first_seen || "").toString().slice(0, 10) || "—")}</td>
+            </tr>`;
+          }).join("") || `<tr><td colspan="6" class="muted">No referring domains in snapshot</td></tr>`}
+          </tbody></table>
+        </div>
+        <p class="muted">Spam score is DataForSEO’s 0–100 risk signal on the referring domain (≥60 = high risk). DFS rank is their authority-style estimate (higher is stronger). Anchor-text distribution is not in this summary snapshot.</p>
+        ${d.message ? `<p class="muted">${esc(d.message)}</p>` : ""}`;
+    }
+
+    function renderKeywordPlan(el, d) {
+      if (!d || typeof d !== "object") {
+        el.innerHTML = emptyState("No placement plan", BLANK_HINTS.keyword_plan);
+        return;
+      }
+      const placements = d.placements || [];
+      const findings = d.findings || [];
+      const evidence = d.page_evidence || {};
+      const kw = (d.target_keywords || []).length
+        ? `<p class="muted" style="margin-top:0">Keywords: ${esc((d.target_keywords || []).join(", "))}</p>`
+        : `<p class="muted" style="margin-top:0">No target keywords provided.</p>`;
+      const statusLine = d.status === "ok"
+        ? `<p class="ok-line">Live page analyzed${d.analyzed_url ? ": <code>" + esc(d.analyzed_url) + "</code>" : ""}</p>`
+        : `<p class="warn-line">${esc(d.disclaimer || d.message || d.status || "Not site-specific")}</p>`;
+      const evidenceBlock = evidence.title || evidence.h1
+        ? `<div class="list-block"><div class="lb-title">Page evidence</div>
+            <ul class="clean">
+              ${evidence.title ? `<li><strong>Title</strong> — ${esc(evidence.title)}</li>` : ""}
+              ${evidence.meta_description ? `<li><strong>Meta</strong> — ${esc(evidence.meta_description)}</li>` : ""}
+              ${evidence.h1 ? `<li><strong>H1</strong> — ${esc(Array.isArray(evidence.h1) ? evidence.h1.join(" | ") : evidence.h1)}</li>` : ""}
+              <li class="muted">${esc(evidence.word_count ?? "—")} words${evidence.js_rendered ? " · JS rendered" : ""}</li>
+            </ul></div>`
+        : "";
+      const placeBlock = placements.length
+        ? placements.slice(0, 8).map((p) => {
+            const present = (p.present_in || []).map((s) =>
+              `<span class="sev-pill ok">${esc(s)}</span>`
+            ).join(" ");
+            const missing = (p.missing_from || []).map((s) =>
+              `<span class="sev-pill warning">${esc(s)}</span>`
+            ).join(" ");
+            const rewrites = p.rewrites || {};
+            const rewriteLines = ["title", "meta_description", "h1"]
+              .filter((k) => rewrites[k])
+              .map((k) => `<div class="opt-field"><div class="of-label">${esc(k.replace("_", " "))}</div>
+                <div class="of-val">${esc(typeof rewrites[k] === "string" ? rewrites[k] : (rewrites[k].suggested || rewrites[k].value || JSON.stringify(rewrites[k])))}</div></div>`)
+              .join("");
+            return `<div class="opt-card">
+              <div class="opt-url">${esc(p.keyword || "")}
+                <span class="muted"> · body hits ${esc(p.body_occurrences ?? 0)}</span>
+              </div>
+              <p class="muted" style="margin:0.25rem 0">Present: ${present || "—"}</p>
+              <p class="muted" style="margin:0.25rem 0">Missing: ${missing || "—"}</p>
+              ${rewriteLines}
+            </div>`;
+          }).join("")
+        : `<p class="muted">No placement rows — add target keywords, then Get keyword placement.</p>`;
+      const findBlock = findings.length
+        ? `<div class="list-block"><div class="lb-title">Findings</div>
+            ${findings.slice(0, 14).map((f) => {
+              const sev = sevClass(f.severity || "info");
+              return `<div class="issue-row">
+                <div class="issue-bar ${sev}"></div>
+                <div>
+                  <div class="issue-code"><span class="sev-pill ${sev}">${esc(f.severity || "info")}</span>${esc(f.keyword || "")}</div>
+                  <div>${esc(f.finding || f.message || "")}</div>
+                </div>
+              </div>`;
+            }).join("")}</div>`
+        : "";
+      el.innerHTML = statusLine + kw + evidenceBlock + placeBlock + findBlock;
     }
 
     function renderSimple(el, d) {
       if (typeof d === "string") { el.innerHTML = `<p class="muted">${esc(d)}</p>`; return; }
-      el.innerHTML = `<p class="muted">${esc(d.status || d.hint || JSON.stringify(d).slice(0,160))}</p>`;
+      if (d && typeof d === "object") {
+        const keys = Object.keys(d).slice(0, 10);
+        if (keys.length) {
+          el.innerHTML = `<ul class="clean">${keys.map((k) =>
+            `<li><code>${esc(k)}</code><br><span class="muted">${esc(stringify(d[k]))}</span></li>`
+          ).join("")}</ul>`;
+          return;
+        }
+      }
+      el.innerHTML = `<p class="muted">${esc(d?.status || d?.hint || "—")}</p>`;
     }
 
     function renderOptimize(el, d) {
       const pages = d.pages || [];
       if (!pages.length) {
-        el.innerHTML = `<p class="muted">${esc(d.status || "ok")} · ${esc(d.message || "No page advice yet")}</p>`;
+        el.innerHTML = emptyState(d.message || "No page advice yet", BLANK_HINTS.optimization);
         return;
       }
       const kw = (d.target_keywords || []).length
-        ? `<p class="muted">Keywords: ${esc((d.target_keywords || []).join(", "))}</p>`
+        ? `<p class="muted" style="margin-top:0">Keywords: ${esc((d.target_keywords || []).join(", "))}</p>`
         : "";
       const src = d.source ? `<p class="muted">Source: ${esc(d.source)}</p>` : "";
-      el.innerHTML = src + kw + pages.slice(0, 3).map((p) => `
-        <div style="margin:0.75rem 0 1rem;padding-top:0.5rem;border-top:1px solid var(--line,#ddd);">
-          <p><strong>${esc(p.url || "")}</strong></p>
-          <ul>
-            <li><code>title</code> — ${esc(p.improved_title || "—")}</li>
-            <li><code>meta</code> — ${esc(p.improved_meta_description || "—")}</li>
-            <li><code>h1</code> — ${esc(p.improved_h1 || "—")}</li>
-          </ul>
+      el.innerHTML = src + kw + pages.slice(0, 3).map((p) => {
+        const fields = [
+          ["Title", p.improved_title],
+          ["Meta description", p.improved_meta_description],
+          ["H1", p.improved_h1],
+        ];
+        return `<div class="opt-card">
+          <div class="opt-url">${esc(p.url || "")}</div>
+          ${fields.map(([label, val]) => `
+            <div class="opt-field">
+              <div class="of-label"><span>${label}</span>
+                <button type="button" class="ghost" data-copy="${esc(val || "")}">Copy</button>
+              </div>
+              <div class="of-val">${esc(val || "—")}</div>
+            </div>`).join("")}
+          ${(p.heading_suggestions || []).length
+            ? `<p class="muted">Headings: ${esc((p.heading_suggestions || []).slice(0, 4).join("; "))}</p>` : ""}
           ${(p.keyword_suggestions || []).length
-            ? `<p class="muted">Suggest: ${esc((p.keyword_suggestions || []).slice(0, 6).join(", "))}</p>`
-            : ""}
+            ? `<p class="muted">Suggest: ${esc((p.keyword_suggestions || []).slice(0, 6).join(", "))}</p>` : ""}
+          ${(p.faq_suggestions || []).length
+            ? `<ul class="clean">${(p.faq_suggestions || []).slice(0, 2).map((f) =>
+                `<li><strong>FAQ</strong> — ${esc(f.question || "")}</li>`
+              ).join("")}</ul>` : ""}
           ${(p.notes || []).length
-            ? `<ul>${(p.notes || []).slice(0, 4).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>`
-            : ""}
-        </div>
-      `).join("");
+            ? `<ul class="clean">${(p.notes || []).slice(0, 4).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+        </div>`;
+      }).join("");
+      wireCopyButtons(el);
     }
 
     function renderJsonish(el, d) {
-      if (!d || typeof d !== "object") { el.innerHTML = `<p class="blank">Blank</p>`; return; }
-      const keys = Object.keys(d).slice(0, 8);
-      el.innerHTML = `<ul>${keys.map(k => `<li><code>${esc(k)}</code>: ${esc(stringify(d[k]))}</li>`).join("")}</ul>`;
+      if (!d || typeof d !== "object") { el.innerHTML = emptyState("Blank", ""); return; }
+      const keys = Object.keys(d).slice(0, 10);
+      el.innerHTML = `<ul class="clean">${keys.map((k) =>
+        `<li><code>${esc(k)}</code><br><span class="muted">${esc(stringify(d[k]))}</span></li>`
+      ).join("")}</ul>`;
     }
 
     function renderAnalyzers(el, d) {
       const results = d.results || [];
-      el.innerHTML = `<ul>${results.map(r =>
-        `<li><code>${esc(r.analyzer)}</code> — ${esc(r.issue_count)} issues${r.error ? " · err" : ""}</li>`
-      ).join("")}</ul>`;
+      if (!results.length) {
+        el.innerHTML = emptyState("No analyzer results", "Run an audit to see coverage.");
+        return;
+      }
+      const withIssues = results.filter((r) => Number(r.issue_count) > 0).length;
+      const totalIssues = results.reduce((n, r) => n + (Number(r.issue_count) || 0), 0);
+      el.innerHTML = `
+        <div class="metrics" style="margin-top:0">
+          <div class="metric"><div class="n">${esc(results.length)}</div><div class="l">Analyzers</div></div>
+          <div class="metric warn"><div class="n">${esc(withIssues)}</div><div class="l">With issues</div></div>
+          <div class="metric"><div class="n">${esc(totalIssues)}</div><div class="l">Issue rows</div></div>
+        </div>
+        <p class="muted">Click an analyzer to see the exact problems (code, message, page).</p>
+        ${results.map((r, idx) => {
+          const open = Number(r.issue_count) > 0 ? "open" : "";
+          const issues = r.issues || [];
+          const metricBits = Object.entries(r.metrics || {}).slice(0, 4).map(([k, v]) =>
+            `<span class="psi-chip">${esc(k)} <strong>${esc(v)}</strong></span>`
+          ).join("");
+          const issueHtml = issues.length
+            ? issues.map((i) => {
+                const sev = sevClass(i.severity);
+                return `<div class="issue-row">
+                  <div class="issue-bar ${sev}"></div>
+                  <div>
+                    <div class="issue-code"><span class="sev-pill ${sev}">${esc(i.severity || "")}</span>${esc(i.code || "")}</div>
+                    <div>${esc(i.message || "")}</div>
+                    ${i.url ? `<div class="muted" style="margin-top:0.2rem"><code>${esc(i.url)}</code></div>` : ""}
+                  </div>
+                </div>`;
+              }).join("")
+            : `<p class="muted" style="margin:0.35rem 0 0">No issues from this analyzer.</p>`;
+          return `<details class="analyzer-drill" ${open} data-idx="${idx}">
+            <summary>
+              <strong>${esc(r.analyzer)}</strong>
+              <span class="muted"> — ${esc(r.issue_count)} issue${Number(r.issue_count) === 1 ? "" : "s"}</span>
+              ${r.error ? '<span class="sev-pill critical">err</span>' : ""}
+            </summary>
+            ${r.error ? `<p class="warn-line">${esc(r.error)}</p>` : ""}
+            ${metricBits ? `<div class="psi-row">${metricBits}</div>` : ""}
+            ${issueHtml}
+          </details>`;
+        }).join("")}`;
     }
 
     function renderSchedules(el, d) {
-      const rows = Array.isArray(d) ? d : [];
-      el.innerHTML = `<ul>${rows.map(s =>
-        `<li>every ${esc(s.every_hours)}h · next ${esc(s.next_run_at||"—")} · ${s.enabled ? "on" : "off"}</li>`
-      ).join("")}</ul>`;
+      const rows = Array.isArray(d) ? d : (d.items || []);
+      const alertNote = d && d.alerts
+        ? `<p class="muted" style="margin-top:0">Alerts: ${d.alerts.configured ? '<span class="sev-pill ok">webhook on</span>' : "set SEO_ALERT_WEBHOOK_URL"} · drop ≥ ${esc(d.alerts.score_drop_threshold ?? 5)}</p>`
+        : "";
+      if (!rows.length) {
+        el.innerHTML = alertNote + emptyState(
+          "No schedules",
+          "Use Assign a recurring audit above (Create schedule), then Load dashboard."
+        );
+        return;
+      }
+      el.innerHTML = alertNote + `<ul class="clean">${rows.map((s) => {
+        const id = s.schedule_id || s.id || "";
+        return `<li>
+          Every <strong>${esc(s.every_hours)}h</strong> · next ${esc(s.next_run_at || "—")}
+          ${s.enabled ? '<span class="sev-pill ok">on</span>' : '<span class="sev-pill warning">off</span>'}
+          <span style="margin-left:0.5rem">
+            <button type="button" class="ghost" data-sched-toggle="${esc(id)}" data-enabled="${s.enabled ? "0" : "1"}">${s.enabled ? "Pause" : "Resume"}</button>
+            <button type="button" class="ghost" data-sched-del="${esc(id)}">Delete</button>
+          </span>
+          <div class="muted"><code>${esc(id)}</code></div>
+        </li>`;
+      }).join("")}</ul>`;
+      el.querySelectorAll("[data-sched-toggle]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-sched-toggle");
+          const enabled = btn.getAttribute("data-enabled") === "1";
+          try {
+            const res = await fetch("/schedules/" + encodeURIComponent(id) + "/enabled", {
+              method: "POST",
+              headers: apiHeaders(),
+              body: JSON.stringify({ enabled }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || ("HTTP " + res.status));
+            loadDashboard();
+          } catch (ex) {
+            document.getElementById("error").hidden = false;
+            document.getElementById("error").textContent = String(ex.message || ex);
+          }
+        });
+      });
+      el.querySelectorAll("[data-sched-del]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-sched-del");
+          if (!id || !confirm("Delete schedule " + id + "?")) return;
+          try {
+            const res = await fetch("/schedules/" + encodeURIComponent(id), {
+              method: "DELETE",
+              headers: apiHeaders(),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.detail || ("HTTP " + res.status));
+            loadDashboard();
+          } catch (ex) {
+            document.getElementById("error").hidden = false;
+            document.getElementById("error").textContent = String(ex.message || ex);
+          }
+        });
+      });
+    }
+
+    function friendlyPaidError(reason) {
+      const s = String(reason || "");
+      if (/402|payment required/i.test(s)) {
+        return "DataForSEO Payment Required — top up balance at app.dataforseo.com, then retry. This is billing, not a product bug.";
+      }
+      return s;
+    }
+
+    function pdfHref(auditIdOrPath) {
+      const raw = String(auditIdOrPath || "").replace(/^(GET|POST)\s+/i, "").trim();
+      if (!raw) return "";
+      if (raw.startsWith("/report/")) return raw.split(/\s+/)[0];
+      if (/^[0-9a-f-]{36}$/i.test(raw)) return "/report/" + raw + "?format=pdf";
+      const m = raw.match(/\/report\/[0-9a-f-]+(?:\?format=pdf)?/i);
+      return m ? m[0].replace(/\?format=pdf$/i, "") + "?format=pdf" : "";
     }
 
     function renderShare(el, d) {
-      const pdfRaw = d.pdf || (d.audit_id ? ("/report/" + d.audit_id + "?format=pdf") : "");
-      const pdf = String(pdfRaw).replace(/^(GET|POST)\s+/i, "").trim();
+      const pdf = pdfHref(d.pdf || d.audit_id || "");
       el.innerHTML = `
-        <p class="muted">${esc(d.hint || "")}</p>
-        <p><code>${esc(d.create || "")}</code></p>
-        ${pdf ? `<p><a href="${esc(pdf)}">Download PDF</a></p>` : ""}
-        <p class="muted">After share: <code>/share/{token}?format=pdf</code></p>`;
+        ${d.hint ? `<p class="muted" style="margin-top:0">${esc(d.hint)}</p>` : ""}
+        <div class="metrics" style="margin-top:0.35rem">
+          <div class="metric"><div class="n">${pdf ? "PDF" : "—"}</div><div class="l">Report</div></div>
+        </div>
+        ${pdf
+          ? `<p><a href="${esc(pdf)}" target="_blank" rel="noopener">Download PDF report</a></p>
+             <p class="muted">Audit <code>${esc(d.audit_id || "")}</code></p>`
+          : `<div class="blank-box"><p class="blank-title">No saved audit yet</p><p class="blank">Run audit with Save on, then download PDF here.</p></div>`}
+        ${d.create ? `<p class="muted">Share API: <code>${esc(d.create)}</code></p>` : ""}
+        <p class="muted">Public share: <code>/share/{token}?format=pdf</code></p>`;
     }
 
     function renderCompare(el, d) {
-      el.innerHTML = `<p class="muted">${esc(d.hint||"")}</p><p class="muted">History points: ${esc(d.history_count)} · ready: ${d.ready ? "yes" : "no"}</p>`;
+      el.innerHTML = `
+        <div class="metrics" style="margin-top:0">
+          <div class="metric"><div class="n">${esc(d.history_count ?? 0)}</div><div class="l">History</div></div>
+          <div class="metric ${d.ready ? "good" : ""}"><div class="n">${d.ready ? "Yes" : "No"}</div><div class="l">Ready</div></div>
+        </div>
+        <p class="muted">${esc(d.hint || "Need 2+ audits to compare score and issues.")}</p>`;
     }
 
     function esc(v) {

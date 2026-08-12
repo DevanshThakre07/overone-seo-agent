@@ -16,6 +16,14 @@ _SUPPRESS_WHEN_UNRENDERED = frozenset(
         "schema_untyped",
         "missing_image_alt",
         "missing_canonical",
+        # S3 graph / schema — unreliable on unrendered shells
+        "orphan_page",
+        "dead_end_page",
+        "few_internal_links",
+        "hub_concentration",
+        "missing_organization_schema",
+        "missing_website_schema",
+        "schema_empty_required",
     }
 )
 

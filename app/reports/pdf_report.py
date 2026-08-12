@@ -8,6 +8,11 @@ from typing import Any
 from app.models.audit import SiteAudit
 from app.models.reports import ReportDocument
 from app.reports.builder import build_report_document
+from app.reports.signal_trust import (
+    describe_optimize_signal,
+    describe_summary_signal,
+    is_provisional_score,
+)
 
 PDF_EXTRA_HINT = (
     "PDF reports require the optional dependency. "
@@ -94,16 +99,39 @@ def render_document_pdf(
     pdf.ln(4)
 
     # Score block
+    provisional = is_provisional_score(summary) or is_provisional_score(
+        (audit.summary if audit is not None else None) or {}
+    )
     pdf.set_font("Helvetica", "B", 28)
     pdf.set_text_color(13, 92, 69)
     pdf.set_x(12)
-    pdf.cell(
-        186,
-        12,
-        f"{summary.overall_seo_score:.0f} / 100",
-        new_x="LMARGIN",
-        new_y="NEXT",
-    )
+    if provisional:
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.cell(
+            186,
+            10,
+            "PROVISIONAL / WITHHELD",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+        pdf.set_font("Helvetica", size=9)
+        pdf.set_text_color(28, 26, 23)
+        pdf.set_x(12)
+        pdf.cell(
+            186,
+            6,
+            f"Raw issue figure {summary.overall_seo_score:.0f}/100 is not a reliable grade",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+    else:
+        pdf.cell(
+            186,
+            12,
+            f"{summary.overall_seo_score:.0f} / 100",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
     pdf.set_text_color(28, 26, 23)
     pdf.set_font("Helvetica", size=10)
     pdf.set_x(12)
@@ -145,10 +173,12 @@ def render_document_pdf(
                     _bullet(pdf, str(msg))
             pdf.ln(1)
 
-    _optimization_section(pdf, document.optimization)
+    _optimization_section(pdf, document.optimization, audit=audit)
 
     if audit is not None:
         _summary_integrations(pdf, audit.summary or {})
+    else:
+        _summary_integrations(pdf, {})
 
     if document.page_overview:
         _section(pdf, "Page overview")
@@ -220,35 +250,42 @@ def _issue_section(pdf: Any, title: str, issues: list, *, limit: int) -> None:
         _bullet(pdf, f"...and {len(issues) - limit} more")
 
 
-def _optimization_section(pdf: Any, optimization: Any) -> None:
-    """AI optimize advice — only when stored on the audit (optimize=true)."""
-    if optimization is None:
-        return
-    pages = getattr(optimization, "pages", None) or []
-    if not pages and getattr(optimization, "page", None) is not None:
-        pages = [optimization.page]
+def _optimization_section(
+    pdf: Any, optimization: Any, *, audit: SiteAudit | None = None
+) -> None:
+    """Always emit Optimize advice — stub when not run (report trust)."""
+    summary = (audit.summary if audit is not None else None) or {}
+    pages = []
+    if optimization is not None:
+        pages = list(getattr(optimization, "pages", None) or [])
+        if not pages and getattr(optimization, "page", None) is not None:
+            pages = [optimization.page]
+
+    sig = describe_optimize_signal(
+        summary,
+        has_optimization=optimization is not None,
+        optimization_status=(
+            getattr(optimization, "status", None) if optimization is not None else None
+        ),
+        optimization_message=(
+            getattr(optimization, "message", None) if optimization is not None else None
+        ),
+    )
+    _section(pdf, "Optimize advice")
+    _bullet(pdf, f"Trust: {sig.trust_label}")
+    _bullet(pdf, f"Status: {sig.status}")
+    _bullet(pdf, sig.reason)
     if not pages:
-        status = getattr(optimization, "status", None)
-        if status:
-            _section(pdf, "Optimize advice")
-            _bullet(pdf, f"Status: {status}")
-            msg = getattr(optimization, "message", None)
-            if msg:
-                _bullet(pdf, str(msg))
         return
 
-    _section(pdf, "Optimize advice")
-    status = getattr(optimization, "status", None)
-    if status:
-        _bullet(pdf, f"Status: {status}")
     keywords = list(getattr(optimization, "target_keywords", None) or [])
     if keywords:
         _bullet(pdf, "Target keywords: " + ", ".join(str(k) for k in keywords[:12]))
-    disclaimer = (
+    _bullet(
+        pdf,
         "Suggestions only — does not edit the live site. "
-        "Included when the audit ran with optimize enabled."
+        "Included when the audit ran with optimize enabled.",
     )
-    _bullet(pdf, disclaimer)
 
     for page in pages[:5]:
         url = getattr(page, "url", "") or ""
@@ -273,8 +310,12 @@ def _optimization_section(pdf: Any, optimization: Any) -> None:
             _bullet(pdf, f"Note: {note}")
         faqs = list(getattr(page, "faq_suggestions", None) or [])[:3]
         for faq in faqs:
-            q = getattr(faq, "question", None) or (faq.get("question") if isinstance(faq, dict) else None)
-            a = getattr(faq, "answer", None) or (faq.get("answer") if isinstance(faq, dict) else None)
+            q = getattr(faq, "question", None) or (
+                faq.get("question") if isinstance(faq, dict) else None
+            )
+            a = getattr(faq, "answer", None) or (
+                faq.get("answer") if isinstance(faq, dict) else None
+            )
             if q:
                 _bullet(pdf, f"FAQ: {q}")
             if a:
@@ -283,120 +324,244 @@ def _optimization_section(pdf: Any, optimization: Any) -> None:
 
 
 def _summary_integrations(pdf: Any, summary: dict[str, Any]) -> None:
-    psi = summary.get("pagespeed") or {}
-    if psi and psi.get("status") not in (None, "skipped"):
-        _section(pdf, "PageSpeed / Core Web Vitals")
-        _bullet(pdf, f"Status: {psi.get('status')}")
-        for strat in psi.get("strategies") or []:
-            lab = strat.get("lab") or {}
-            name = strat.get("strategy") or "mobile"
+    """Always emit integration sections with trust labels (never silent skip)."""
+    _pdf_pagespeed(pdf, summary)
+    _pdf_gsc(pdf, summary)
+    _pdf_ga4(pdf, summary)
+    _pdf_serp(pdf, summary)
+    _pdf_backlinks(pdf, summary)
+    _pdf_keywords(pdf, summary)
+
+
+def _pdf_trust_header(pdf: Any, title: str, summary: dict, key: str) -> Any:
+    sig = describe_summary_signal(summary, key, title=title)
+    _section(pdf, sig.title)
+    _bullet(pdf, f"Trust: {sig.trust_label}")
+    _bullet(pdf, f"Status: {sig.status}")
+    _bullet(pdf, sig.reason)
+    return sig
+
+
+def _pdf_pagespeed(pdf: Any, summary: dict[str, Any]) -> None:
+    sig = _pdf_trust_header(pdf, "PageSpeed / Core Web Vitals", summary, "pagespeed")
+    if not sig.show_data:
+        return
+    psi = sig.block
+    for strat in psi.get("strategies") or []:
+        lab = strat.get("lab") or {}
+        name = strat.get("strategy") or "mobile"
+        _bullet(
+            pdf,
+            (
+                f"{name}: performance {lab.get('performance_score')}/100, "
+                f"LCP {lab.get('lcp_ms')}ms, CLS {lab.get('cls')}, "
+                f"INP {lab.get('inp_ms')}ms"
+            ),
+        )
+    lab = psi.get("lab") or {}
+    if lab and not psi.get("strategies"):
+        _bullet(
+            pdf,
+            (
+                f"Performance {lab.get('performance_score')}/100, "
+                f"LCP {lab.get('lcp_ms')}ms, CLS {lab.get('cls')}, "
+                f"INP {lab.get('inp_ms')}ms"
+            ),
+        )
+    for row in (psi.get("issues") or [])[:8]:
+        if isinstance(row, dict):
+            _bullet(
+                pdf,
+                f"[{row.get('severity', 'warning')}] {row.get('code')}: {row.get('message')}",
+            )
+
+
+def _pdf_gsc(pdf: Any, summary: dict[str, Any]) -> None:
+    sig = _pdf_trust_header(pdf, "Google Search Console", summary, "google_search_console")
+    if not sig.show_data:
+        return
+    gsc = sig.block
+    if gsc.get("matched_site_url"):
+        _bullet(pdf, f"Property: {gsc.get('matched_site_url')}")
+    snap = gsc.get("snapshot") or {}
+    period = snap.get("period") or {}
+    if period.get("start"):
+        _bullet(
+            pdf,
+            (
+                f"Period: {period.get('start')} -> {period.get('end')} "
+                f"({period.get('days')} days)"
+            ),
+        )
+    n = int(snap.get("opportunity_count") or len(snap.get("opportunities") or []) or 0)
+    _bullet(pdf, f"Opportunities: {n}")
+    top_q = snap.get("top_queries") or []
+    if top_q:
+        _bullet(pdf, "Top queries:")
+        for row in top_q[:10]:
             _bullet(
                 pdf,
                 (
-                    f"{name}: performance {lab.get('performance_score')}/100, "
-                    f"LCP {lab.get('lcp_ms')}ms, CLS {lab.get('cls')}"
+                    f"  {row.get('query')} — clicks {row.get('clicks')}, "
+                    f"impr {row.get('impressions')}, CTR {row.get('ctr')}, "
+                    f"pos {row.get('position')}"
                 ),
             )
-        lab = psi.get("lab") or {}
-        if lab and not psi.get("strategies"):
+    else:
+        _bullet(pdf, "Top queries: none in this period")
+    top_p = snap.get("top_pages") or []
+    if top_p:
+        _bullet(pdf, "Top pages:")
+        for row in top_p[:10]:
             _bullet(
                 pdf,
                 (
-                    f"Performance {lab.get('performance_score')}/100, "
-                    f"LCP {lab.get('lcp_ms')}ms, CLS {lab.get('cls')}"
+                    f"  {row.get('page')} — clicks {row.get('clicks')}, "
+                    f"impr {row.get('impressions')}, pos {row.get('position')}"
                 ),
             )
+    for row in (snap.get("opportunities") or [])[:8]:
+        _bullet(
+            pdf,
+            (
+                f"Opportunity [{row.get('kind', 'page2')}] {row.get('query')} on "
+                f"{row.get('page')} — pos {row.get('position')}, "
+                f"impr {row.get('impressions')}"
+            ),
+        )
 
-    gsc = summary.get("google_search_console") or {}
-    if gsc and gsc.get("status") not in (None, "skipped"):
-        _section(pdf, "Google Search Console")
-        _bullet(pdf, f"Status: {gsc.get('status')}")
-        if gsc.get("matched_site_url"):
-            _bullet(pdf, f"Property: {gsc.get('matched_site_url')}")
-        if gsc.get("message"):
-            _bullet(pdf, str(gsc.get("message")))
-        snap = gsc.get("snapshot") or {}
-        if snap:
-            n = snap.get("opportunity_count") or len(snap.get("opportunities") or [])
-            _bullet(pdf, f"Opportunities: {n}")
 
-    ga4 = summary.get("google_analytics") or {}
-    if ga4 and ga4.get("status") not in (None, "skipped"):
-        _section(pdf, "Google Analytics (GA4)")
-        _bullet(pdf, f"Status: {ga4.get('status')}")
-        pid = ga4.get("property_id") or (ga4.get("snapshot") or {}).get("property_id")
-        if pid:
-            _bullet(pdf, f"Property: {pid}")
-        totals = (ga4.get("snapshot") or {}).get("totals") or {}
-        if totals:
+def _pdf_ga4(pdf: Any, summary: dict[str, Any]) -> None:
+    sig = _pdf_trust_header(pdf, "Google Analytics (GA4)", summary, "google_analytics")
+    if not sig.show_data:
+        return
+    ga4 = sig.block
+    snap = ga4.get("snapshot") or {}
+    pid = ga4.get("property_id") or snap.get("property_id")
+    if pid:
+        _bullet(pdf, f"Property: {pid}")
+    if snap.get("start_date"):
+        _bullet(
+            pdf,
+            (
+                f"Period: {snap.get('start_date')} -> {snap.get('end_date')} "
+                f"({snap.get('days')} days)"
+            ),
+        )
+    totals = snap.get("totals") or {}
+    if totals:
+        _bullet(
+            pdf,
+            (
+                f"Sessions {totals.get('sessions', 0)} | "
+                f"Users {totals.get('total_users', 0)} | "
+                f"Views {totals.get('screen_page_views', 0)}"
+            ),
+        )
+    top_p = snap.get("top_pages") or []
+    if top_p:
+        _bullet(pdf, "Top pages:")
+        for row in top_p[:10]:
             _bullet(
                 pdf,
                 (
-                    f"Sessions {totals.get('sessions', 0)} | "
-                    f"Users {totals.get('total_users', 0)} | "
-                    f"Views {totals.get('screen_page_views', 0)}"
+                    f"  {row.get('page_path')} — views {row.get('screen_page_views')}, "
+                    f"sessions {row.get('sessions')}, users {row.get('total_users')}"
                 ),
             )
 
-    serp = summary.get("serp") or {}
-    if serp and serp.get("status") not in (None, "skipped"):
-        _section(pdf, "SERP / Rankings")
-        _bullet(pdf, f"Status: {serp.get('status')}")
-        if serp.get("message"):
-            _bullet(pdf, str(serp.get("message")))
-        if serp.get("target_domain"):
-            _bullet(pdf, f"Target domain: {serp.get('target_domain')}")
-        for check in (serp.get("checks") or [])[:12]:
-            kw = check.get("keyword")
-            rank = check.get("rank") or {}
-            if rank.get("found"):
-                _bullet(
-                    pdf,
-                    f"{kw} -> position {rank.get('position')} ({rank.get('url')})",
-                )
+
+def _pdf_serp(pdf: Any, summary: dict[str, Any]) -> None:
+    sig = _pdf_trust_header(pdf, "SERP / Rankings", summary, "serp")
+    if not sig.show_data:
+        return
+    serp = sig.block
+    if serp.get("target_domain"):
+        _bullet(pdf, f"Target domain: {serp.get('target_domain')}")
+    for check in (serp.get("checks") or [])[:12]:
+        kw = check.get("keyword")
+        rank = check.get("rank") or {}
+        if rank.get("found"):
+            _bullet(
+                pdf,
+                f"{kw} -> position {rank.get('position')} ({rank.get('url')})",
+            )
+        else:
+            _bullet(pdf, f"{kw} -> not in top results")
+        for row in (check.get("top_organic") or [])[:3]:
+            _bullet(
+                pdf,
+                f"  #{row.get('rank_group')} {row.get('domain')} — {row.get('title')}",
+            )
+    if serp.get("organic") and not serp.get("checks"):
+        for row in (serp.get("organic") or [])[:8]:
+            _bullet(
+                pdf,
+                f"#{row.get('rank_group')} {row.get('domain')} — {row.get('title')}",
+            )
+
+
+def _pdf_backlinks(pdf: Any, summary: dict[str, Any]) -> None:
+    sig = _pdf_trust_header(pdf, "Backlinks", summary, "backlinks")
+    if not sig.show_data:
+        return
+    bl = sig.block
+    snap = bl.get("summary") or {}
+    info = snap.get("info") if isinstance(snap.get("info"), dict) else {}
+    if snap:
+        _bullet(pdf, f"Backlinks: {snap.get('backlinks')}")
+        _bullet(pdf, f"Referring domains: {snap.get('referring_domains')}")
+        if snap.get("rank") is not None:
+            _bullet(pdf, f"DFS rank: {snap.get('rank')}")
+        if info.get("target_spam_score") is not None:
+            _bullet(pdf, f"Target spam score: {info.get('target_spam_score')}")
+        if snap.get("broken_backlinks") is not None:
+            _bullet(pdf, f"Broken backlinks: {snap.get('broken_backlinks')}")
+    for row in (bl.get("top_referring_domains") or [])[:8]:
+        spam = row.get("backlinks_spam_score")
+        risk = "unknown"
+        if isinstance(spam, (int, float)):
+            if spam >= 60:
+                risk = "high risk"
+            elif spam >= 30:
+                risk = "elevated"
             else:
-                _bullet(pdf, f"{kw} -> not in top results")
-        if serp.get("organic") and not serp.get("checks"):
-            for row in (serp.get("organic") or [])[:8]:
-                _bullet(
-                    pdf,
-                    f"#{row.get('rank_group')} {row.get('domain')} — {row.get('title')}",
-                )
+                risk = "low risk"
+        _bullet(
+            pdf,
+            (
+                f"{row.get('domain')} — backlinks {row.get('backlinks')}, "
+                f"spam {spam if spam is not None else '—'} ({risk}), "
+                f"DFS rank {row.get('rank')}"
+            ),
+        )
 
-    bl = summary.get("backlinks") or {}
-    if bl and bl.get("status") not in (None, "skipped"):
-        _section(pdf, "Backlinks")
-        _bullet(pdf, f"Status: {bl.get('status')}")
-        if bl.get("message"):
-            _bullet(pdf, str(bl.get("message")))
-        snap = bl.get("summary") or {}
-        if snap:
-            _bullet(pdf, f"Backlinks: {snap.get('backlinks')}")
-            _bullet(pdf, f"Referring domains: {snap.get('referring_domains')}")
-        for row in (bl.get("top_referring_domains") or [])[:8]:
+
+def _pdf_keywords(pdf: Any, summary: dict[str, Any]) -> None:
+    sig = _pdf_trust_header(pdf, "Keyword Research", summary, "keyword_research")
+    kr = sig.block
+    _bullet(pdf, f"Real research: {'yes' if kr.get('is_real_research') else 'no'}")
+    if not sig.show_data:
+        return
+    research = kr.get("research") or {}
+    metrics = kr.get("metrics") or research.get("keywords") or []
+    if metrics and kr.get("is_real_research"):
+        for row in metrics[:12]:
             _bullet(
                 pdf,
                 (
-                    f"{row.get('domain')} — backlinks {row.get('backlinks')}, "
-                    f"rank {row.get('rank')}"
+                    f"{row.get('keyword')}: vol {row.get('search_volume', '—')}, "
+                    f"CPC {row.get('cpc', '—')}, "
+                    f"KD {row.get('keyword_difficulty', '—')}"
                 ),
             )
-
-    kr = summary.get("keyword_research") or {}
-    if kr and kr.get("status") not in (None, "skipped", "unavailable"):
-        _section(pdf, "Keyword research")
-        _bullet(pdf, f"Status: {kr.get('status')}")
-        _bullet(pdf, f"Real research: {'yes' if kr.get('is_real_research') else 'no'}")
-        if kr.get("message"):
-            _bullet(pdf, str(kr.get("message")))
-        research = kr.get("research") or {}
-        metrics = kr.get("metrics") or research.get("keywords") or []
-        if metrics and kr.get("is_real_research"):
-            for row in metrics[:12]:
-                _bullet(
-                    pdf,
-                    (
-                        f"{row.get('keyword')}: vol {row.get('search_volume', '—')}, "
-                        f"KD {row.get('keyword_difficulty', '—')}"
-                    ),
-                )
+        related = kr.get("related") or research.get("related") or []
+        for row in related[:8]:
+            _bullet(
+                pdf,
+                (
+                    f"Related: {row.get('keyword')} — vol "
+                    f"{row.get('search_volume', '—')}, KD "
+                    f"{row.get('keyword_difficulty', '—')}"
+                ),
+            )

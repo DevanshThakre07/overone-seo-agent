@@ -58,6 +58,15 @@ INFORMATIONAL_ONLY_CODES = frozenset(
         "robots_no_sitemap_ref",
         "robots_fetch_error",
         "canonical_mismatch",
+        # S3 graph / schema depth — visibility first; avoid score spam
+        "orphan_pages_summary",
+        "dead_end_page",
+        "few_internal_links",
+        "hub_concentration",
+        "missing_organization_schema",
+        "missing_website_schema",
+        "invalid_schema_type",
+        "schema_empty_required",
     }
 )
 

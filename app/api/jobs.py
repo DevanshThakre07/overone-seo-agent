@@ -102,9 +102,12 @@ class InProcessJobRunner:
         def _run() -> dict[str, Any]:
             try:
                 result = run_audit_job(request)
-                finalize_schedule_from_job(
+                from app.api.job_handlers import after_audit_job_success
+
+                after_audit_job_success(
+                    result,
                     {"schedule_id": schedule_id} if schedule_id else {},
-                    audit_id=result.get("audit_id"),
+                    schedule_id=schedule_id,
                 )
                 return result
             except Exception as exc:  # noqa: BLE001
@@ -252,11 +255,13 @@ class DurableJobRunner:
                     if k in result
                 }
                 self._store.complete(job.job_id, slim)
-                from app.api.job_handlers import finalize_schedule_from_job
+                from app.api.job_handlers import after_audit_job_success
 
-                finalize_schedule_from_job(
+                after_audit_job_success(
+                    result,
                     job.payload,
-                    audit_id=slim.get("audit_id"),
+                    schedule_id=(job.payload or {}).get("schedule_id"),
+                    job_id=job.job_id,
                 )
                 log_event(
                     logger,

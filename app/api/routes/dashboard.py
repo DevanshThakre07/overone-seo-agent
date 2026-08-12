@@ -39,4 +39,11 @@ def dashboard_json(
 def dashboard_ui():
     if not _STATIC.exists():
         raise HTTPException(status_code=404, detail="dashboard.html missing")
-    return FileResponse(_STATIC, media_type="text/html")
+    return FileResponse(
+        _STATIC,
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )

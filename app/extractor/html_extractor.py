@@ -106,9 +106,13 @@ class HtmlExtractor:
             external_occurrences,
         ) = self._extract_links(soup, crawl_result.final_url, seed_url)
 
-        schema_types, has_json_ld, schema_script_count = self._extract_schema(soup)
-        if schema_script_count and not has_json_ld:
+        schema_types, has_json_ld, schema_script_count, parse_errors, blocks = (
+            self._extract_schema(soup)
+        )
+        if schema_script_count and parse_errors and not schema_types:
             warnings.append("json_ld_present_but_unparsed")
+        elif parse_errors:
+            warnings.append("json_ld_partial_parse_errors")
 
         visible_text = self._visible_text(soup)
         word_count = len(re.findall(r"\b\w+\b", visible_text))
@@ -178,6 +182,9 @@ class HtmlExtractor:
             is_broken=False,
             has_json_ld=has_json_ld,
             schema_types=schema_types,
+            json_ld_parse_errors=parse_errors,
+            json_ld_script_count=schema_script_count,
+            json_ld_blocks=blocks,
             title_source=title_source,
             meta_description_source=meta_source,
             og_title=og_title,
@@ -375,36 +382,98 @@ class HtmlExtractor:
 
         return internal, external, internal_occurrences, external_occurrences
 
-    def _extract_schema(self, soup: BeautifulSoup) -> tuple[list[str], bool, int]:
+    def _extract_schema(
+        self, soup: BeautifulSoup
+    ) -> tuple[list[str], bool, int, int, list[dict[str, Any]]]:
+        """Return types, has_json_ld, script_count, parse_errors, shallow blocks."""
         types: list[str] = []
+        blocks: list[dict[str, Any]] = []
         scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
-        parsed_ok = False
+        parse_errors = 0
+        _MAX_BLOCKS = 10
+
         for script in scripts:
             raw = script.string or script.get_text() or ""
             raw = raw.strip()
             if not raw:
                 continue
+            data = None
+            err: str | None = None
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
-                # Common: trailing commas / HTML comments inside JSON-LD
                 cleaned = re.sub(r"/\*.*?\*/", "", raw, flags=re.S)
                 cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
                 try:
                     data = json.loads(cleaned)
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as exc:
+                    parse_errors += 1
+                    err = str(exc)
+                    if len(blocks) < _MAX_BLOCKS:
+                        blocks.append(
+                            {"ok": False, "types": [], "error": err, "props": {}}
+                        )
                     continue
-            parsed_ok = True
-            self._collect_schema_types(data, types)
 
-        # Preserve order, drop duplicates
+            block_types: list[str] = []
+            self._collect_schema_types(data, block_types)
+            types.extend(block_types)
+            if len(blocks) < _MAX_BLOCKS:
+                blocks.append(
+                    {
+                        "ok": True,
+                        "types": list(dict.fromkeys(block_types)),
+                        "error": None,
+                        "props": self._shallow_schema_props(data),
+                    }
+                )
+
         deduped: list[str] = []
         seen: set[str] = set()
         for item in types:
             if item not in seen:
                 seen.add(item)
                 deduped.append(item)
-        return deduped, parsed_ok and bool(deduped or scripts), len(scripts)
+        has_json_ld = bool(deduped)
+        return deduped, has_json_ld, len(scripts), parse_errors, blocks
+
+    def _shallow_schema_props(self, node: Any) -> dict[str, Any]:
+        """Flatten top-level / @graph objects for required-field checks."""
+        objects: list[dict[str, Any]] = []
+
+        def walk(n: Any) -> None:
+            if isinstance(n, list):
+                for item in n:
+                    walk(item)
+                return
+            if not isinstance(n, dict):
+                return
+            if n.get("@graph") is not None:
+                walk(n.get("@graph"))
+            types = n.get("@type")
+            type_list: list[str] = []
+            if isinstance(types, list):
+                type_list = [str(x) for x in types if x]
+            elif types:
+                type_list = [str(types)]
+            if type_list:
+                props = {
+                    k: v
+                    for k, v in n.items()
+                    if k not in {"@context", "@graph"} and not isinstance(v, (dict, list))
+                }
+                # Keep short string/list fields only
+                slim = {}
+                for k, v in props.items():
+                    if isinstance(v, str):
+                        slim[k] = v[:200]
+                    elif isinstance(v, (int, float, bool)) or v is None:
+                        slim[k] = v
+                objects.append({"types": type_list, "props": slim})
+
+        walk(node)
+        # Return first few typed objects as a list under key "objects"
+        return {"objects": objects[:8]}
 
     def _collect_schema_types(self, node: Any, types: list[str]) -> None:
         if isinstance(node, list):

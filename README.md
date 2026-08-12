@@ -90,6 +90,18 @@ seo-api
 
 OpenAPI docs: http://localhost:8000/docs
 
+### Host (FP-2) — Docker / HTTPS
+
+See **[docs/HOSTING.md](docs/HOSTING.md)** for Railway / Render / Fly / VPS.
+
+```bash
+docker compose up --build
+# health: http://localhost:8000/health
+# dashboard: http://localhost:8000/dashboard/ui?url=https://example.com/
+```
+
+Set `SEO_API_KEY` before exposing the service publicly. `seo-api` respects the `PORT` env var on hosted platforms.
+
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Health check |

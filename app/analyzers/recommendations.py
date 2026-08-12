@@ -21,10 +21,12 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
         meta = (page.meta_description or "").strip()
         h1 = (page.h1[0].strip() if page.h1 else "")
         topic = h1 or title or page.og_title or "this page"
+        page_kind = _page_kind(page.final_url, title=title, h1=h1)
 
         rec: dict[str, Any] = {
             "url": page.final_url,
             "rendering_unreliable": unreliable,
+            "page_kind": page_kind,
             "current": {
                 "title": title or None,
                 "meta_description": meta or None,
@@ -38,21 +40,26 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
         }
         if unreliable:
             rec["actions"].append(
-                {
-                    "code": "enable_js_rendering",
-                    "message": (
+                _action(
+                    "enable_js_rendering",
+                    (
                         "Do not apply on-page copy changes until Playwright captures "
                         "the rendered DOM — current body/heading data is from an unrendered JS shell."
                     ),
-                }
+                    url=page.final_url,
+                    field="rendering",
+                    current="js_shell_unrendered",
+                )
             )
             out.append(rec)
             continue
 
         # Always produce concrete rewrite candidates (same spirit as optimize_page).
         secondary = (page.h2[0].strip() if page.h2 else "") or meta
-        suggested_title = _rewrite_title(title, topic, secondary)
-        suggested_meta = _rewrite_meta(meta, topic, title or suggested_title)
+        suggested_title = _rewrite_title(title, topic, secondary, page_kind=page_kind)
+        suggested_meta = _rewrite_meta(
+            meta, topic, title or suggested_title, page_kind=page_kind
+        )
         suggested_h1 = h1 if h1 else _trim(topic, 70)
 
         rec["suggested_title"] = suggested_title
@@ -79,18 +86,20 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
 
         if not title:
             rec["actions"].append(
-                {
-                    "code": "missing_title",
-                    "message": f'Replace missing <title> with: "{suggested_title}" ({len(suggested_title)} chars)',
-                    "suggested_value": suggested_title,
-                }
+                _action(
+                    "missing_title",
+                    f'Replace missing <title> with: "{suggested_title}" ({len(suggested_title)} chars)',
+                    url=page.final_url,
+                    field="title",
+                    current=None,
+                    suggested=suggested_title,
+                )
             )
         elif title == suggested_title and len(title) < TITLE_MIN:
-            # Be explicit rather than emitting filler copy or staying silent.
             rec["actions"].append(
-                {
-                    "code": "title_too_short_needs_copy",
-                    "message": (
+                _action(
+                    "title_too_short_needs_copy",
+                    (
                         f'Title is {len(title)} chars — short for search results '
                         f"(aim {TITLE_MIN}–{TITLE_MAX}). Everything on the page already "
                         f'repeats it, so add a real value proposition, e.g. '
@@ -98,9 +107,12 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
                         f"(up to {TITLE_MAX - len(title) - 3} more chars). "
                         "No filler was invented for you."
                     ),
-                    "current_value": title,
-                    "char_budget": TITLE_MAX - len(title) - 3,
-                }
+                    url=page.final_url,
+                    field="title",
+                    current=title,
+                    suggested=None,
+                    char_budget=TITLE_MAX - len(title) - 3,
+                )
             )
         elif title != suggested_title:
             reason = (
@@ -109,27 +121,32 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
                 "can be clearer for SEO"
             )
             rec["actions"].append(
-                {
-                    "code": "title_rewrite",
-                    "message": (
+                _action(
+                    "title_rewrite",
+                    (
                         f'Title is {reason} ({len(title)} chars). '
                         f'Use: "{suggested_title}" ({len(suggested_title)} chars)'
                     ),
-                    "current_value": title,
-                    "suggested_value": suggested_title,
-                }
+                    url=page.final_url,
+                    field="title",
+                    current=title,
+                    suggested=suggested_title,
+                )
             )
 
         if not meta:
             rec["actions"].append(
-                {
-                    "code": "missing_meta_description",
-                    "message": (
+                _action(
+                    "missing_meta_description",
+                    (
                         f'Replace missing meta description with: "{suggested_meta}" '
                         f"({len(suggested_meta)} chars)"
                     ),
-                    "suggested_value": suggested_meta,
-                }
+                    url=page.final_url,
+                    field="meta_description",
+                    current=None,
+                    suggested=suggested_meta,
+                )
             )
         elif meta != suggested_meta:
             reason = (
@@ -138,44 +155,55 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
                 "can be clearer for SEO"
             )
             rec["actions"].append(
-                {
-                    "code": "meta_rewrite",
-                    "message": (
+                _action(
+                    "meta_rewrite",
+                    (
                         f'Meta description is {reason} ({len(meta)} chars). '
                         f'Use: "{suggested_meta}" ({len(suggested_meta)} chars)'
                     ),
-                    "current_value": meta,
-                    "suggested_value": suggested_meta,
-                }
+                    url=page.final_url,
+                    field="meta_description",
+                    current=meta,
+                    suggested=suggested_meta,
+                )
             )
 
         if not h1:
             rec["actions"].append(
-                {
-                    "code": "missing_h1",
-                    "message": f'Replace missing H1 with: "{suggested_h1}"',
-                    "suggested_value": suggested_h1,
-                }
+                _action(
+                    "missing_h1",
+                    f'Replace missing H1 with: "{suggested_h1}"',
+                    url=page.final_url,
+                    field="h1",
+                    current=None,
+                    suggested=suggested_h1,
+                )
             )
         elif len(page.h1) > 1:
             rec["actions"].append(
-                {
-                    "code": "multiple_h1",
-                    "message": (
+                _action(
+                    "multiple_h1",
+                    (
                         f'Keep a single H1. Prefer: "{h1}". '
                         f"Convert extras to H2: {', '.join(repr(x) for x in page.h1[1:3])}"
                     ),
-                    "suggested_value": h1,
-                }
+                    url=page.final_url,
+                    field="h1",
+                    current=h1,
+                    suggested=h1,
+                )
             )
 
         if not page.canonical:
             rec["actions"].append(
-                {
-                    "code": "missing_canonical",
-                    "message": f'Add: <link rel="canonical" href="{page.final_url}" />',
-                    "suggested_value": page.final_url,
-                }
+                _action(
+                    "missing_canonical",
+                    f'Add: <link rel="canonical" href="{page.final_url}" />',
+                    url=page.final_url,
+                    field="canonical",
+                    current=None,
+                    suggested=page.final_url,
+                )
             )
 
         if page.images:
@@ -195,12 +223,15 @@ def build_prescriptive_recommendations(pages: list[PageExtraction]) -> list[dict
                     .title()
                 )
                 rec["actions"].append(
-                    {
-                        "code": "missing_image_alt",
-                        "message": f'Set alt="{alt}" on image {src}',
-                        "suggested_value": alt,
-                        "src": src,
-                    }
+                    _action(
+                        "missing_image_alt",
+                        f'Set alt="{alt}" on image {src}',
+                        url=page.final_url,
+                        field="img_alt",
+                        current=None,
+                        suggested=alt,
+                        src=src,
+                    )
                 )
 
         out.append(rec)
@@ -304,7 +335,67 @@ def _gsc_opportunity_action(opp: dict[str, Any]) -> dict[str, Any] | None:
         "kind": kind,
         "source": "google_search_console",
         "suggested_value": None,
+        "evidence": {
+            "url": opp.get("page"),
+            "field": "gsc_query",
+            "current_value": (
+                f'query="{query}" pos={position:.1f} impr={impressions} ctr={ctr:.1%}'
+            ),
+            "suggested_value": None,
+        },
     }
+
+
+def _action(
+    code: str,
+    message: str,
+    *,
+    url: str,
+    field: str | None = None,
+    current: Any = None,
+    suggested: Any = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    """Recommendation action with explicit evidence (accuracy rule for Plan Perfect)."""
+    row: dict[str, Any] = {
+        "code": code,
+        "message": message,
+        "evidence": {
+            "url": url,
+            "field": field,
+            "current_value": current,
+            "suggested_value": suggested,
+        },
+    }
+    if suggested is not None:
+        row["suggested_value"] = suggested
+    if current is not None:
+        row["current_value"] = current
+    row.update(extra)
+    return row
+
+
+def _page_kind(url: str, *, title: str = "", h1: str = "") -> str:
+    """Classify page type so rewrites stay accurate (no homepage marketing on /privacy)."""
+    blob = f"{url} {title} {h1}".lower()
+    path = ""
+    try:
+        from urllib.parse import urlsplit
+
+        path = (urlsplit(url).path or "/").lower()
+    except Exception:  # noqa: BLE001
+        path = url.lower()
+    if any(k in path or k in blob for k in ("privacy", "privacypolicy")):
+        return "privacy"
+    if any(k in path or k in blob for k in ("terms", "tos", "legal")):
+        return "legal"
+    if any(k in path for k in ("blog", "article", "post", "news")):
+        return "article"
+    if any(k in path for k in ("product", "pricing", "shop")):
+        return "product"
+    if path in {"", "/"}:
+        return "home"
+    return "generic"
 
 
 def _norm_page_url(url: str) -> str:
@@ -327,8 +418,14 @@ def _is_redundant(addition: str, existing: str) -> bool:
     return bool(a) and (a in e or e in a)
 
 
-def _rewrite_title(title: str, topic: str, secondary: str = "") -> str:
+def _rewrite_title(
+    title: str, topic: str, secondary: str = "", *, page_kind: str = "generic"
+) -> str:
     if not title:
+        if page_kind == "privacy":
+            return _fit(f"Privacy Policy | {topic}", TITLE_MIN, TITLE_MAX)
+        if page_kind == "legal":
+            return _fit(f"Terms of Service | {topic}", TITLE_MIN, TITLE_MAX)
         return _fit(f"{topic} | Official Site", TITLE_MIN, TITLE_MAX)
     if TITLE_MIN <= len(title) <= TITLE_MAX:
         return title
@@ -346,7 +443,27 @@ def _rewrite_title(title: str, topic: str, secondary: str = "") -> str:
     return _trim(title, TITLE_MAX)
 
 
-def _rewrite_meta(meta: str, topic: str, title: str) -> str:
+def _rewrite_meta(
+    meta: str, topic: str, title: str, *, page_kind: str = "generic"
+) -> str:
+    # Legal/policy pages must not inherit homepage marketing copy.
+    if page_kind == "privacy":
+        base = meta or f"How {topic} collects, uses, and protects personal data."
+        if not meta or len(meta) < META_MIN:
+            text = f"{base.rstrip(' .')}. Read the full privacy policy for details."
+            return _trim(text, META_MAX) if len(text) > META_MAX else text
+        if len(meta) > META_MAX:
+            return _trim(meta, META_MAX)
+        return meta
+    if page_kind == "legal":
+        base = meta or f"Terms that govern use of {topic}."
+        if not meta or len(meta) < META_MIN:
+            text = f"{base.rstrip(' .')}. Review the full terms before using the service."
+            return _trim(text, META_MAX) if len(text) > META_MAX else text
+        if len(meta) > META_MAX:
+            return _trim(meta, META_MAX)
+        return meta
+
     if not meta:
         return _fit(
             f"{topic}: learn what it offers, key benefits, and how to get started today.",

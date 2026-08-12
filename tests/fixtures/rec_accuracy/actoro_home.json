@@ -1,0 +1,21 @@
+{
+  "url": "https://actoro.app/",
+  "final_url": "https://actoro.app/",
+  "status_code": 200,
+  "title": "Actoro",
+  "meta_description": "Read less, live more.",
+  "h1": ["Read less, live more."],
+  "h2": ["Active learning for readers"],
+  "canonical": "https://actoro.app/",
+  "js_rendered": true,
+  "word_count": 420,
+  "images": [
+    {
+      "src": "https://actoro.app/hero.png",
+      "alt": null,
+      "alt_present": false,
+      "decorative": false,
+      "is_source": false
+    }
+  ]
+}

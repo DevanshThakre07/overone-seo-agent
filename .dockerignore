@@ -1,0 +1,27 @@
+# Build context exclusions for seo-api images
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.git/
+.gitignore
+.DS_Store
+.env
+.env.*
+!.env.example
+data/**
+!data/.gitkeep
+secrets/
+*.db
+*.sqlite3
+out/
+docs/
+*.md
+!README.md
+3d.html
+tests/

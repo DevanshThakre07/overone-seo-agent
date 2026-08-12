@@ -19,6 +19,9 @@ venv/
 credentials*.json
 client_secret*.json
 
+# Google OAuth client secrets (never commit)
+secrets/
+
 # Tooling
 .pytest_cache/
 .coverage
@@ -27,15 +30,25 @@ htmlcov/
 .ruff_cache/
 .DS_Store
 
-# Runtime data
+# Runtime data / local dumps
 data/*
 !data/.gitkeep
 *.db
 *.sqlite3
 out/
+out.json
+optimize.json
+*.log
+
+# Local JSON dumps (keep committed fixtures + config)
 *.json
 !config/*.yaml
 !tests/fixtures/**
 
-# Google OAuth client secrets (never commit)
-secrets/
+# Local experiments (not product surface)
+3d.html
+
+# hermes-agent lives in a sibling repo — never part of this project
+# (this ignore is defensive if someone copies it under SEO-Agent/)
+hermes-agent/
+../hermes-agent/

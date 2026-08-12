@@ -4,6 +4,11 @@ from app.models.audit import SiteAudit
 from app.models.issues import Issue
 from app.models.reports import ReportDocument
 from app.reports.builder import build_report_document
+from app.reports.signal_trust import (
+    describe_optimize_signal,
+    describe_summary_signal,
+    markdown_trust_lines,
+)
 
 
 def render_markdown(audit: SiteAudit) -> str:
@@ -22,6 +27,7 @@ def render_markdown(audit: SiteAudit) -> str:
     sections += _render_serp_section(summary)
     sections += _render_backlinks_section(summary)
     sections += _render_keyword_research_section(summary)
+    sections += _render_optimize_trust_section(audit, summary)
 
     if sections:
         body = body.replace("## Overall SEO Score", sections + "## Overall SEO Score", 1)
@@ -54,12 +60,13 @@ def _render_data_integrity_section(summary: dict) -> str:
 
 
 def _render_pagespeed_section(summary: dict) -> str:
-    psi = summary.get("pagespeed") or {}
-    if not psi or psi.get("status") in (None, "skipped"):
-        return ""
-    lines = ["## PageSpeed / Core Web Vitals", "", f"- Status: **{psi.get('status')}**"]
-    if psi.get("message") and psi.get("status") != "ok":
-        lines.append(f"- {psi['message']}")
+    sig = describe_summary_signal(
+        summary, "pagespeed", title="PageSpeed / Core Web Vitals"
+    )
+    lines = markdown_trust_lines(sig)
+    if not sig.show_data:
+        return "\n".join(lines) + "\n"
+    psi = sig.block
     for strat in psi.get("strategies") or []:
         lab = strat.get("lab") or {}
         name = strat.get("strategy") or "mobile"
@@ -68,7 +75,6 @@ def _render_pagespeed_section(summary: dict) -> str:
             f"LCP {lab.get('lcp_ms')}ms, CLS {lab.get('cls')}, "
             f"INP {lab.get('inp_ms')}ms"
         )
-    # Single-strategy shape from some paths
     lab = psi.get("lab") or {}
     if lab and not psi.get("strategies"):
         lines.append(
@@ -89,16 +95,13 @@ def _render_pagespeed_section(summary: dict) -> str:
 
 
 def _render_gsc_section(summary: dict) -> str:
-    gsc = summary.get("google_search_console") or {}
-    if not gsc or gsc.get("status") in (None, "skipped"):
-        return ""
-    lines = [
-        "## Google Search Console",
-        "",
-        f"- Status: **{gsc.get('status')}**",
-    ]
-    if gsc.get("message"):
-        lines.append(f"- {gsc['message']}")
+    sig = describe_summary_signal(
+        summary, "google_search_console", title="Google Search Console"
+    )
+    lines = markdown_trust_lines(sig)
+    if not sig.show_data:
+        return "\n".join(lines) + "\n"
+    gsc = sig.block
     if gsc.get("matched_site_url"):
         lines.append(f"- Property: `{gsc.get('matched_site_url')}`")
     snap = gsc.get("snapshot") or {}
@@ -139,18 +142,16 @@ def _render_gsc_section(summary: dict) -> str:
 
 
 def _render_ga4_section(summary: dict) -> str:
-    ga4 = summary.get("google_analytics") or {}
-    if not ga4 or ga4.get("status") in (None, "skipped"):
-        return ""
-    lines = [
-        "## Google Analytics (GA4)",
-        "",
-        f"- Status: **{ga4.get('status')}**",
-    ]
-    if ga4.get("message"):
-        lines.append(f"- {ga4['message']}")
-    if ga4.get("property_id"):
-        lines.append(f"- Property: `{ga4.get('property_id')}`")
+    sig = describe_summary_signal(
+        summary, "google_analytics", title="Google Analytics (GA4)"
+    )
+    lines = markdown_trust_lines(sig)
+    if not sig.show_data:
+        return "\n".join(lines) + "\n"
+    ga4 = sig.block
+    if ga4.get("property_id") or (ga4.get("snapshot") or {}).get("property_id"):
+        pid = ga4.get("property_id") or (ga4.get("snapshot") or {}).get("property_id")
+        lines.append(f"- Property: `{pid}`")
     snap = ga4.get("snapshot") or {}
     totals = snap.get("totals") or {}
     if snap.get("start_date"):
@@ -177,12 +178,11 @@ def _render_ga4_section(summary: dict) -> str:
 
 
 def _render_serp_section(summary: dict) -> str:
-    serp = summary.get("serp") or {}
-    if not serp or serp.get("status") in (None, "skipped"):
-        return ""
-    lines = ["## SERP / Rankings", "", f"- Status: **{serp.get('status')}**"]
-    if serp.get("message"):
-        lines.append(f"- {serp['message']}")
+    sig = describe_summary_signal(summary, "serp", title="SERP / Rankings")
+    lines = markdown_trust_lines(sig)
+    if not sig.show_data:
+        return "\n".join(lines) + "\n"
+    serp = sig.block
     if serp.get("target_domain"):
         lines.append(f"- Target domain: `{serp.get('target_domain')}`")
     for check in serp.get("checks") or []:
@@ -200,7 +200,6 @@ def _render_serp_section(summary: dict) -> str:
                 f"  - #{row.get('rank_group')} `{row.get('domain')}` — "
                 f"{row.get('title')}"
             )
-    # Standalone SERP shape (single lookup stored on summary)
     if serp.get("organic") and not serp.get("checks"):
         for row in (serp.get("organic") or [])[:10]:
             lines.append(
@@ -212,51 +211,66 @@ def _render_serp_section(summary: dict) -> str:
 
 
 def _render_backlinks_section(summary: dict) -> str:
-    bl = summary.get("backlinks") or {}
-    if not bl or bl.get("status") in (None, "skipped"):
-        return ""
-    lines = ["## Backlinks", "", f"- Status: **{bl.get('status')}**"]
-    if bl.get("message"):
-        lines.append(f"- {bl['message']}")
+    sig = describe_summary_signal(summary, "backlinks", title="Backlinks")
+    lines = markdown_trust_lines(sig)
+    if not sig.show_data:
+        return "\n".join(lines) + "\n"
+    bl = sig.block
     snap = bl.get("summary") or {}
     if snap:
         lines.append(f"- Backlinks: **{snap.get('backlinks')}**")
         lines.append(f"- Referring domains: **{snap.get('referring_domains')}**")
-        lines.append(f"- Rank: {snap.get('rank')}")
+        lines.append(f"- DFS rank: {snap.get('rank')}")
+        info = snap.get("info") if isinstance(snap.get("info"), dict) else {}
+        if info.get("target_spam_score") is not None:
+            lines.append(f"- Target spam score: **{info.get('target_spam_score')}**")
+        if snap.get("broken_backlinks") is not None:
+            lines.append(f"- Broken backlinks: {snap.get('broken_backlinks')}")
     refs = bl.get("top_referring_domains") or []
     if refs:
         lines.extend(["", "### Top referring domains", ""])
         for row in refs[:10]:
+            spam = row.get("backlinks_spam_score")
+            if isinstance(spam, (int, float)):
+                if spam >= 60:
+                    risk = "high risk"
+                elif spam >= 30:
+                    risk = "elevated"
+                else:
+                    risk = "low risk"
+            else:
+                risk = "unknown"
             lines.append(
                 f"- `{row.get('domain')}` — backlinks {row.get('backlinks')}, "
-                f"rank {row.get('rank')}"
+                f"spam {spam if spam is not None else '—'} ({risk}), "
+                f"DFS rank {row.get('rank')}"
             )
     lines.append("")
     return "\n".join(lines) + "\n"
 
 
 def _render_keyword_research_section(summary: dict) -> str:
-    """Report research status; show metrics when DataForSEO (or similar) ran."""
-    kr = summary.get("keyword_research") or {}
+    """Always emit Keyword Research with trust label (never silent omit)."""
+    sig = describe_summary_signal(
+        summary, "keyword_research", title="Keyword Research"
+    )
+    kr = sig.block
     research = kr.get("research") or {}
     metrics = kr.get("metrics") or research.get("keywords") or []
-    lines = [
-        "## Keyword Research",
-        "",
-        f"- Status: **{kr.get('status', 'unavailable')}**",
+    lines = markdown_trust_lines(sig)
+    lines.insert(
+        -1,
         f"- Real research: **{'yes' if kr.get('is_real_research') else 'no'}**",
-    ]
+    )
     if kr.get("provider") or research.get("provider"):
-        lines.append(
-            f"- Provider: `{kr.get('provider') or research.get('provider')}`"
+        lines.insert(
+            -1,
+            f"- Provider: `{kr.get('provider') or research.get('provider')}`",
         )
-    if kr.get("message"):
-        lines.append(f"- {kr['message']}")
 
-    if metrics and kr.get("is_real_research"):
+    if metrics and kr.get("is_real_research") and sig.show_data:
         lines.extend(
             [
-                "",
                 "| Keyword | Volume | CPC | Competition | Difficulty |",
                 "| --- | ---: | ---: | --- | ---: |",
             ]
@@ -288,22 +302,46 @@ def _render_keyword_research_section(summary: dict) -> str:
         lines.append("")
         return "\n".join(lines) + "\n"
 
-    lines.extend(
-        [
-            "",
-            "Keyword **placement** on the live page is separate from research. "
-            "Without a keyword API, SEO-Agent will not invent volume or difficulty.",
-            "",
-            "Configure DataForSEO in `.env`:",
-            "",
-            "```bash",
-            "KEYWORD_API_PROVIDER=dataforseo",
-            "KEYWORD_API_LOGIN=...",
-            "KEYWORD_API_PASSWORD=...",
-            "```",
-            "",
-        ]
+    if not sig.show_data:
+        lines.extend(
+            [
+                "Keyword **placement** on the live page is separate from research. "
+                "Without a keyword API, SEO-Agent will not invent volume or difficulty.",
+                "",
+            ]
+        )
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def _render_optimize_trust_section(audit: SiteAudit, summary: dict) -> str:
+    """Stub when optimize was not run; detailed pages stay in document body."""
+    has_pages = bool(
+        audit.optimization is not None
+        and (audit.optimization.pages or getattr(audit.optimization, "page", None))
     )
+    # Full suggestions already rendered in document body when pages exist.
+    if has_pages:
+        return ""
+    sig = describe_optimize_signal(
+        summary,
+        has_optimization=audit.optimization is not None,
+        optimization_status=(
+            audit.optimization.status if audit.optimization is not None else None
+        ),
+        optimization_message=(
+            audit.optimization.message if audit.optimization is not None else None
+        ),
+    )
+    # Use markdown heading that matches PDF / inventory naming for parity tests.
+    lines = [
+        "## Optimize advice",
+        "",
+        f"- Trust: **{sig.trust_label}**",
+        f"- Status: **{sig.status}**",
+        f"- {sig.reason}",
+        "",
+    ]
     return "\n".join(lines) + "\n"
 
 

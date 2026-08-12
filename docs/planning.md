@@ -5,7 +5,9 @@
 > - Do **not** start a new phase until the owner validates the further-actions plan below.  
 > - Keep secrets out of this file (no cookies, API keys, passwords).  
 > - Companion status notes also live in `docs/GOOGLE_SEARCH_CONSOLE.md` (integrations detail).  
-> - Last updated: **2026-08-10** (Rank history shipped; alerts next; monetize UX parked)
+> - **Two tracks:** **SEO-strong** (priority now) vs **Fast path** (sellable product — kept, starts after SEO-strong gate). Near-term / Future / Capability map stay the full roadmap.  
+> - **IDs to remember:** **S1–S4** = SEO-strong slices; **FP-1–FP-6** = Fast path slices — see **Glossary (S1 / S2 / …)** below.  
+> - Last updated: **2026-08-12** (Plan Perfect build complete except PP-5 funded + PP-H)
 
 ---
 
@@ -40,7 +42,8 @@ Discover → Audit → Keywords → Rank/SERP → GSC gaps → Content advice
 | **Approve Phase 3 (Retainer / product)?** | ✅ **Validated 2026-08-08** — **v1 without GA4** |
 | **Approve Phase 4A (infra)?** | ✅ **Validated 2026-08-08** — **Postgres + job queue; SQLite fallback** |
 | **Approve next after 4A?** | ✅ **Validated 2026-08-08** — **F (4A harden)** then **A (GA4)** |
-| **Approve next after GA4?** | ✅ **Validated 2026-08-08** — **B (OAuth Production)** |
+| **Approve Fast path (sellable MVP)?** | ✅ **Validated 2026-08-10** — section kept; **starts after SEO-strong gate** |
+| **Approve SEO-strong first?** | ✅ **Validated 2026-08-10** — trust → signals → depth (links/schema); fund SERP; defer full login / GEO / Apply / Local / product |
 
 **Phase 4A owner constraints (enforced)**
 1. Postgres + durable job queue; SQLite remains default for local/dev.  
@@ -81,6 +84,12 @@ Discover → Audit → Keywords → Rank/SERP → GSC gaps → Content advice
 | 2026-08-08 | **Phase B OAuth Production** | Checklist API, env flags, `/legal/privacy`, Testing UX; Cloud Publish = owner |
 | 2026-08-09 | **Phase G GA4 picker** | Preferred property per `account_id`; dashboard dropdown; audit omits id |
 | 2026-08-10 | **Phase Rank history** | `rank_snapshots` SQLite/Postgres; dual-write audit SERP + `/rank`; API/dashboard/Hermes |
+| 2026-08-10 | **Phase Schedule alerts** | Webhook on score drop / new criticals after compare audits; `GET /alerts/status`, `POST /alerts/test` |
+| 2026-08-10 | **S1 Report trust** | Shared `signal_trust`; MD/PDF always stub skipped/not-run; PDF provisional score |
+| 2026-08-10 | **S2 Signal completeness** | PDF/dashboard list parity for GSC/GA4/PSI/SERP/backlinks/keywords; optimize headings/FAQ |
+| 2026-08-10 | **S3 Analyzer depth** | Crawl-scoped internal link graph (orphans/hubs/dead-ends); richer schema parse + homepage Organization/WebSite + required-field checks |
+| 2026-08-10 | **FP-2 Host packaging** | Dockerfile + compose + `docs/HOSTING.md` + `PORT` env; owner still deploys to cloud |
+| 2026-08-12 | **Plan Perfect PP-0→PP-8** | Truth defaults, schedules UI, analyzer drill-down, keywords/rank UX, schema advisor, GA4 narrative, rec accuracy fixtures (`tests/fixtures/rec_accuracy` + unit tests). PP-5 anchors wait on DataForSEO funds; PP-H owner host/OAuth |
 
 ### What “optimize” means today (explicit)
 
@@ -142,8 +151,8 @@ Legend: ✅ done · 🔶 partial · ❌ missing
 | LLM rewrite suggestions | ✅ | Advice only |
 | Keyword placement plan | ✅ | |
 | Content briefs from SERP | ❌ | Phase 2–3 |
-| Internal linking graph | 🔶 | Thin |
-| Rich schema validation | 🔶 | Coverage aggregated (less noise); deep validation still thin |
+| Internal linking graph | ✅ | Crawl-scoped orphans / dead-ends / hub concentration + metrics |
+| Rich schema validation | ✅ | Parse errors; homepage Organization/WebSite; empty required fields; coverage |
 
 ### E. Local / international / GEO
 | Capability | Status | Notes |
@@ -158,6 +167,7 @@ Legend: ✅ done · 🔶 partial · ❌ missing
 | GA4 traffic / conversions | 🔶 | Properties + report + preferred property picker; funnels later |
 | CrUX standalone | ❌ | Low (PSI has field data) |
 | Scheduled audits + trends | ✅ | `/trends` + interval schedules in seo-api |
+| Monitoring alerts (webhook) | 🔶 | Engine ✅ (`AlertService` + `/alerts/*`); **Slack/Discord/webhook URL setup deferred** — leave unset until later |
 
 ### G. Delivery & product UX
 | Capability | Status | Notes |
@@ -176,7 +186,7 @@ Legend: ✅ done · 🔶 partial · ❌ missing
 | Postgres + job queue | ✅ | 4A: optional `SEO_DATABASE_URL`; SQLite default |
 | Crawl auth secrets | ✅ | In-memory per request only (no disk/DB/logs) |
 | Rate limits, audit logs, billing | ❌ | Phase 4 |
-| Hosted HTTPS deploy | ❌ | Phase 4 |
+| Hosted HTTPS deploy | 🔶 | FP-2: Dockerfile + compose + `docs/HOSTING.md`; owner deploys to Railway/Render/Fly/VPS |
 
 **Rough maturity:** strong on **tech + on-page + GSC + keywords + advice**; weak on **auth crawl, SERP, backlinks, rank track, dashboard, apply, multi-tenant infra**.
 
@@ -330,12 +340,84 @@ Owner confirmed **keep GEO in planning**. Build only after explicit validate.
 
 Work the engine and truthful delivery — not marketing chrome / narrative dashboard clone.
 
+> **Priority (validated 2026-08-10):** finish **SEO-strong** below before executing Fast path FP-2+ (host/Stripe). Fast path section stays documented but deferred.
+
+### SEO-strong order *(validated 2026-08-10)*
+
+| # | Focus | Status | Notes |
+|---|--------|--------|-------|
+| S1 | **Report trust** — Markdown + PDF parity; clear skipped / not-run wording | ✅ shipped 2026-08-10 | Soft: trust/polish |
+| S2 | **Signal completeness** — GA4/SERP/backlinks/optimize/PSI consistently on dashboard + PDF when run | ✅ shipped 2026-08-10 | Soft: incomplete delivery |
+| S3 | **Analyzer depth** — internal linking graph + richer schema validation | ✅ shipped 2026-08-10 | Soft: thin depth |
+| S4 | **DataForSEO funded** — owner tops up SERP so rank history / live SERP stop looking empty | ✅ smoke 2026-08-10 | Tiny keyword OK; avoid heavy SERP until more $ |
+| — | Rank history | ✅ shipped 2026-08-10 | |
+| — | Schedule alerts engine | ✅ shipped 2026-08-10 — channel setup later | |
+
+### Glossary — what S1 / S2 / S3 / S4 mean *(read this later)*
+
+Plain-English cheat sheet so “S1 Report trust” still makes sense months from now. **S** = SEO-strong. **FP** = Fast path (sellable product). Same number does **not** mean the same work across tracks except **S1 = FP-1**.
+
+| ID | Name | In one sentence | Problem it fixes | Done when… | Key code / notes |
+|----|------|-----------------|------------------|------------|------------------|
+| **S1** | **Report trust** | Reports tell the truth about what was and wasn’t run. | MD/PDF used to **hide** skipped PageSpeed/GSC/GA4/SERP/backlinks/optimize — looked like those features didn’t exist. | Every major signal has a visible **Trust: Not run / OK / Error / Unavailable** stub in **Markdown and PDF**; provisional scores labeled on PDF too. | `app/reports/signal_trust.py`, `markdown_report.py`, `pdf_report.py` — ✅ shipped 2026-08-10 |
+| **S2** | **Signal completeness** | When a signal **did** run, it shows up everywhere that matters. | Opt-in data sometimes lands in summary/API but not dashboard, PDF, or share — incomplete client delivery. | If audit flags `include_*` / optimize / PSI ran successfully, results appear on **dashboard + Markdown + PDF** (same facts, no silent drop). | PDF/MD/dashboard list parity for GSC/GA4/PSI/SERP/BL/keywords/optimize — ✅ shipped 2026-08-10 |
+| **S3** | **Analyzer depth** | Core on-site SEO analysis gets stronger (not more chrome). | Internal links + schema checks are thin vs best-in-class auditors. | Richer **internal linking graph** findings + deeper **schema** validation/issues in audit score + reports. | `links_analyzer` graph + `schema_analyzer` / extractor JSON-LD blocks — ✅ shipped 2026-08-10 |
+| **S4** | **DataForSEO funded** | Live SERP/rank history actually has data (owner money, not code). | Rank history / SERP look “empty” when DataForSEO returns Payment Required. | Account has SERP balance; a real `/rank` or `include_serp` audit writes snapshots. | Owner tops up DataForSEO — not a build sprint |
+| **Rank history** | (shipped) | Store keyword positions over time. | Point-in-time SERP only — couldn’t answer “are we moving?” | `rank_snapshots` + `GET /rank/history` + dashboard panel. | ✅ 2026-08-10 |
+| **Schedule alerts** | (engine shipped) | Fire webhook when score drops / new criticals after compare. | Schedules ran but nobody got notified. | Engine + `/alerts/*` live; **Slack/channel URL setup later**. | ✅ engine; channels deferred |
+
+#### S1 vs S2 (easy to confuse)
+
+| | **S1 Report trust** | **S2 Signal completeness** |
+|--|---------------------|----------------------------|
+| Focus | Honesty when something was **skipped** | Completeness when something **ran** |
+| Bad before | Silent omit → “feature missing?” | Ran SERP but PDF/dashboard blank |
+| Good after | “Trust: **Not run** — pass include_serp…” | SERP block filled on dashboard **and** PDF |
+
+#### Fast path IDs (after SEO-strong gate)
+
+| ID | Name | In one sentence |
+|----|------|-----------------|
+| **FP-1** | Report trust | Same as **S1** (already shipped). |
+| **FP-2** | Host | Put `seo-api` on HTTPS with secrets + storage. |
+| **FP-3** | OAuth Production | Google Cloud Publish so clients can Connect Google outside Testing. |
+| **FP-4** | Thin client delivery | One flow: audit → scorecard → PDF (no heyfixit clone). |
+| **FP-5** | Billing | Stripe Checkout so clients can pay online. |
+| **FP-6** | Client isolation | Per-client `account_id` / API key boundaries. |
+
+#### Other labels you’ll see
+
+| Label | Meaning |
+|-------|---------|
+| **SEO-strong gate** | S1–S3 done (S4 funded ideally) → then start Fast path FP-2+. |
+| **Near-term** | Broader strengthen-SEO list; S1–S4 is the ordered cut of it. |
+| **Future / parked** | GEO, Apply, Local, Slack channels, narrative dashboard — not now. |
+| **Validate** | Owner must approve the next slice before we build it. |
+
+### Explicitly deferred while SEO-strong runs
+
+| Item | Why deferred |
+|------|----------------|
+| Playwright full login automation | Cookies cover most agency cases; high cost / low near-term ROI |
+| GEO (E) / Apply (C) / Local (D) | New product surfaces — keep on Future; validate later |
+| Toxic-link scoring | Optional after S3; not required for “strong” gate |
+| Host / Stripe / multi-client packaging | **Fast path** — after SEO-strong gate |
+| Slack / alert channels | Later (already parked) |
+
+```text
+S1 Report trust → S2 Signal completeness → S3 Links + schema depth
+     (+ S4 owner: fund DataForSEO in parallel)
+     → then Fast path FP-2+ (Host → OAuth → thin client → Stripe → isolation)
+```
+
+### Near-term checklist (legacy rows — kept)
+
 | # | Focus | Status |
 |---|--------|--------|
-| 1 | Signal completeness on saved audits (GA4/SERP/backlinks/optimize/PSI → dashboard + PDF) | 🔶 partial (optimize in PDF ✅; keep hardening) |
+| 1 | Signal completeness on saved audits (GA4/SERP/backlinks/optimize/PSI → dashboard + PDF) | ✅ = **S2 shipped** |
 | 2 | **Rank history** — persist SERP/rank snapshots over time (“are we moving?”) | ✅ shipped 2026-08-10 |
-| 3 | Schedule **alerts** — score drop / new criticals (webhook first; email later) | ⏸ **next to validate / build** |
-| 4 | Report trust — Markdown + PDF parity; clear skipped/not-run wording | 🔶 ongoing |
+| 3 | Schedule **alerts** — score drop / new criticals (webhook first; email later) | ✅ engine shipped 2026-08-10 — **channel setup later** |
+| 4 | Report trust — Markdown + PDF parity; clear skipped/not-run wording | ✅ = **S1 shipped** |
 | — | Do **not** clone heyfixit-style Overview/Auditor/Spy/Diagnoser/Fixer tabs yet | parked → production |
 
 ---
@@ -344,10 +426,13 @@ Work the engine and truthful delivery — not marketing chrome / narrative dashb
 
 Owner (2026-08-10): strengthen SEO first; client-narrative dashboard and monetization packaging wait until **hosting + OAuth Production + billing readiness**. Then validate a **Phase Monetize** slice before build.
 
+> **Note:** Fast path is the sellable cut of this section. **SEO-strong runs first** (validated 2026-08-10). Items out of both SEO-strong and Fast path stay parked (GEO, Apply, Local, heyfixit UI, Slack channels, etc.). See **Glossary** above for S/FP IDs.
+
 | Item | Notes | Status |
 |------|--------|--------|
 | Client delivery UX | Scorecard + Audit / Diagnose / Fix / Track tabs (real data only; blank when missing) | ⏸ production |
-| Monitoring alerts (productized) | Score drop / new criticals after schedules — also listed near-term as SEO bridge | ⏸ / near-term webhook OK earlier |
+| **Alert channels** | Wire `SEO_ALERT_WEBHOOK_URL` (Slack / Discord / custom) + dry-run; optional email after | ⏸ **later** (owner 2026-08-10 — skip Slack/workspace for now) |
+| Monitoring alerts (productized) | Multi-channel packaging / client-facing alert prefs | ⏸ production |
 | Multi-client isolation | API keys / account_id boundaries for multiple clients | ⏸ production |
 | Share + PDF retainer handoff polish | Already shipped basics; packaging for paid clients | ⏸ production |
 | **GEO (E)** | AI citations / generative visibility — keep on roadmap; validate before build | ⏸ planned |
@@ -357,8 +442,62 @@ Owner (2026-08-10): strengthen SEO first; client-narrative dashboard and monetiz
 **Explicitly not next:** clone [vibha demo dashboard](https://vibha-ramprakash.github.io/seo-geo-tracker/dashboard.html); AI-Search Spy; Fixer paste-pack CMS apply.
 
 ```text
-Strengthen SEO engine → Rank history + schedule alerts → Host + OAuth Production → Monetize UX / billing
+SEO-strong (S1–S3 + fund SERP) → Fast path (Host + OAuth + Stripe) → deeper Future items
 ```
+
+---
+
+## Fast path — sellable product *(validated 2026-08-10; deferred until SEO-strong gate)*
+
+**Goal:** clients can **pay online** and get value — not finish the entire capability map.
+
+**Definition of done (buyable MVP):**
+
+```text
+Pay → Connect Google → Run audit → Dashboard scorecard → Download / share PDF
+```
+
+**Relationship to other sections:** Near-term + Future + Capability map stay the long-term truth. Fast path stays documented. **Do not start FP-2+ until SEO-strong S1–S3 are done** (owner 2026-08-10). FP-1 (report trust) = SEO-strong S1 — build once, counts for both.
+
+### In scope (ordered)
+
+| # | Slice | What ships | Status |
+|---|--------|------------|--------|
+| FP-1 | **Report trust** | Markdown + PDF parity; clear skipped / not-run wording | ✅ = SEO-strong **S1** shipped 2026-08-10 |
+| FP-2 | **Host** | HTTPS deploy of `seo-api` + storage + secrets (owner picks host) | ✅ packaging 2026-08-10 — owner deploys |
+| FP-3 | **OAuth Production** | Google Cloud Publish + env (`GSC_OAUTH_PUBLISHING_STATUS=production`) — mostly owner | ⏸ after SEO-strong (code/docs ✅) |
+| FP-4 | **Thin client delivery** | One flow: audit → scorecard → PDF share (reuse dashboard/share; **no** Spy/Fixer/heyfixit clone) | ⏸ after SEO-strong |
+| FP-5 | **Billing** | Stripe Checkout — one plan / per-site (or simple retainer SKU) | ⏸ after SEO-strong |
+| FP-6 | **Client isolation** | Per-client `account_id` / API key boundaries (enough to sell; not full IAM) | ⏸ after SEO-strong |
+
+### Explicitly out of Fast path *(keep on full roadmap)*
+
+| Deferred | Where it lives |
+|----------|----------------|
+| Slack / Discord / webhook channel wiring | Future → Alert channels |
+| Email alerts, productized monitoring prefs | Future |
+| GEO (E), Apply (C), Local (D) | Future / planned |
+| heyfixit-style Overview / Auditor / Spy / Diagnoser / Fixer | Future → Client delivery UX |
+| Toxic links, content briefs, CrUX standalone | Capability map ❌ |
+| Full multi-tenant roles, rate limits, audit-log billing depth | Future / H. Production |
+| Hermes-as-primary UX | Keep Hermes for chat; sellable surface = hosted API + dashboard |
+| Playwright full login | Deferred under SEO-strong |
+
+### Fast path sequencing
+
+```text
+[SEO-strong S1–S3 first]
+FP-1 Report trust (= S1) → FP-2 Host → FP-3 OAuth Publish (owner)
+     → FP-4 Thin client flow → FP-5 Stripe → FP-6 Isolation harden
+```
+
+### Owner constraints (Fast path)
+
+1. Do **not** build Slack workspace / alert channels for MVP.  
+2. Do **not** clone narrative GEO-tracker dashboards.  
+3. Prefer reuse of existing dashboard + PDF + Connect Google over new product chrome.  
+4. Full planning sections remain authoritative for anything not listed In scope above.  
+5. **SEO-strong before FP-2+** (validated 2026-08-10).
 
 ---
 
@@ -366,12 +505,12 @@ Strengthen SEO engine → Rank history + schedule alerts → Host + OAuth Produc
 
 | Status | Action |
 |--------|--------|
-| **Now** | **Schedule alerts** (webhook on score drop / new criticals) — next SEO strengthen slice |
-| **Shipped** | **Rank history** — `rank_snapshots` table; `GET /rank/history`; dashboard panel; Hermes `list_rank_history` |
-| **Parked** | Client-narrative dashboard + Phase Monetize → **production stage** |
-| **Kept planned** | **GEO (E)** / **Apply (C)** / **Local (D)** — validate before build |
+| **Active stage** | **Plan Perfect** — build slices **done** (PP-0…PP-4, PP-6…PP-8); remaining = funded/owner |
+| **Now (build)** | None on Plan Perfect code path — optional polish only |
+| **Owner parallel** | **PP-5** fund DataForSEO (anchors) · **PP-H** HTTPS deploy (`DEPLOY.md`) + OAuth Publish |
+| **Still deferred** | Form login; GEO; Apply; Local; Stripe/SaaS isolation; Slack workspace |
 
-Owner must validate **schedule alerts** before the next code build.
+Do **not** create a Slack workspace for alerts now — leave `SEO_ALERT_WEBHOOK_URL` unset until the later channel-setup slice.
 
 ---
 
@@ -383,6 +522,8 @@ When a task finishes:
 - [ ] Flip status in **Capability map** (❌ → 🔶/✅)  
 - [ ] Remove or check off the item under **Further actions**  
 - [ ] Set **Immediate next step** to the new top item  
+- [ ] If SEO-strong work: flip status in **SEO-strong order**  
+- [ ] If Fast path work: flip status in **Fast path — In scope** (only after SEO-strong gate for FP-2+)  
 - [ ] Bump **Last updated** at the top  
 - [ ] Mirror critical status in `docs/GOOGLE_SEARCH_CONSOLE.md` when integrations change  
 
@@ -415,5 +556,104 @@ When a task finishes:
 | 2026-08-10 | **Monetize / client-narrative dashboard deferred** until production (hosting + OAuth Production + billing readiness) |
 | 2026-08-10 | **Near-term = strengthen SEO** — default next: **rank history**; then schedule alerts; GEO/Apply stay validate-gated |
 | 2026-08-10 | **Rank history validated + shipped** — snapshots table; dual-write from audit SERP + `/rank`; `GET /rank/history`; dashboard + Hermes |
+| 2026-08-10 | **Schedule alerts shipped** — webhook on score drop / new criticals; routes + job hook; email later |
+| 2026-08-10 | **Alert channel setup deferred** — no Slack workspace now; wire webhook/email later |
+| 2026-08-10 | **Fast path validated** — sellable MVP track added as its own section; Near-term / Future / Capability map **kept**; out of scope: Slack, GEO, Apply, heyfixit clone |
+| 2026-08-10 | **SEO-strong first validated** — S1 report trust → S2 signals → S3 links/schema; fund DataForSEO (owner); defer full login / GEO / Apply / Local / product; Fast path FP-2+ after gate |
+| 2026-08-10 | **S1 Report trust shipped** — `app/reports/signal_trust.py`; MD/PDF always show Trust/Not run stubs; PDF provisional score; tests |
+| 2026-08-10 | **Glossary added** — plain-English S1–S4 + FP-1–FP-6 cheat sheet in Near-term (for later reading) |
+| 2026-08-10 | **S2 Signal completeness shipped** — GSC/GA4 period+lists on PDF/dashboard; PSI INP/issues; SERP competitors; optimize FAQ/headings |
+| 2026-08-10 | **S3 Analyzer depth shipped** — crawl-scoped link graph; schema parse errors + Organization/WebSite + required fields |
+| 2026-08-10 | **Next order approved** — (1) smoke Actoro multi-page → dashboard + PDF · (2) fund DataForSEO · (3) FP-2 Host |
+| 2026-08-10 | **Actoro smoke ✅** — audit `d44a8d4b-…` 3 pages JS-rendered; S3 graph metrics; dashboard + PDF; GSC/GA4 OK |
+| 2026-08-10 | **S4 DataForSEO creds updated** — login OK, balance $1; **API blocked until account verification** (40104); no paid spend yet |
+| 2026-08-10 | **S4 smoke ✅** — `search_volume(["actoro"])` → volume 390; ~$0.09 spent; balance ~$0.91; skip SERP/backlinks until more funds |
+| 2026-08-10 | **Client-hurry pipeline** — deliver audit/PDF pack first; Host only if remote; defer form-login / Stripe / GEO |
+| 2026-08-10 | **Actoro delivery pack ✅** — audit `a8d5c3f9-…` score 74 / 3 pages; PDF + 30-day share; no SERP (DFS $ low) |
+| 2026-08-10 | **FP-2 Host packaging ✅** — `Dockerfile`, `docker-compose.yml`, `docs/HOSTING.md`, `PORT` env; owner deploys |
+| 2026-08-10 | **FP-2 local Docker smoke ✅** — compose healthy; API key required; `/` redirects to dashboard |
+| 2026-08-11 | **Full-project deploy wiring ✅** — root `docker-compose.yml` (seo-api + Hermes profile); `DEPLOY.md` |
+| 2026-08-12 | **Plan Perfect validated** — owner: write full plan at bottom of planning.md and start process |
 
-Re-validate next **code** build (**schedule alerts**) before implementing. **C** / **D** / **E** and Phase Monetize remain parked.
+Next: owner **PP-H** + **PP-5** (DataForSEO funds). Plan Perfect code path complete; do not block on Stripe/SaaS.
+
+---
+
+## Plan Perfect — near-accurate, complete responses *(validated 2026-08-12)*
+
+**Goal:** Every dashboard/API/PDF signal is **honest**, **actionable**, and **as accurate as the underlying data allows** — no silent empties, no misleading defaults, no “admin only” dead ends for core SEO loops.
+
+**Definition of done (near-perfect, not infinite):**
+
+```text
+Crawl enough pages → score + issues that match reality
+  → GSC/GA4 snapshots clear
+  → Keywords with volume/CPC/related surfaced
+  → Rank / history readable
+  → Backlinks with risk (when funded)
+  → Placement + optimize advice grounded in live page
+  → Schedules assignable from dashboard
+  → Analyzers drill into real issues
+  → Empty/error states always explain why + what to do
+```
+
+**Non-goals (still Future / Fast path):** Stripe, multi-tenant IAM, form-login Playwright, GEO, Apply-to-CMS, Slack workspace, heyfixit clone.
+
+**Accuracy rules (enforce on every PP slice)**
+
+1. **Never invent metrics** — blank/error with reason beats fake numbers.  
+2. **Recommendations must cite evidence** — page URL, field, current value, or GSC/GA4 row when available.  
+3. **Paid calls stay opt-in** — SERP/backlinks never auto; show 402 as “fund DataForSEO,” not “feature broken.”  
+4. **Defaults must not lie** — if dashboard Max pages=1, label it as quick scan; “full audit” needs higher default or explicit confirm.  
+5. **Mobile PSI preferred** when PageSpeed runs (Google-weighted).  
+6. **Update `docs/understand.md` + section `i` help** when behavior changes.
+
+### Ordered slices
+
+| ID | Slice | Ships | Status |
+|----|--------|--------|--------|
+| **PP-0** | **Truth defaults** | Dashboard Max pages default ↑ (e.g. 15); PageSpeed default **mobile** (or both when on); clearer quick-scan vs full-audit labeling; recommendation messages cite evidence; paid-error copy standardized | ✅ 2026-08-12 |
+| **PP-1** | **Schedules UI** | Create / pause / delete / run-due from dashboard; panel stops being API-only | ✅ 2026-08-12 |
+| **PP-2** | **Analyzer drill-down** | Analyzers panel expands to issue list (code + message + URL) — no duplicate-without-detail | ✅ 2026-08-12 |
+| **PP-3** | **Keywords depth UI** | Surface CPC, competition, related/gap keywords already in API; short intent hint where reliable | ✅ 2026-08-12 |
+| **PP-4** | **Rank UX** | Human labels for not-found vs position; history shows dates; optional single-keyword spotlight | ✅ 2026-08-12 |
+| **PP-5** | **Backlinks depth** | Keep spam/risk; add anchors when DFS endpoint funded; graceful 402 UX | ⏸ owner funds (402 UX ✅) |
+| **PP-6** | **Schema advisor** | Beyond “missing” — recommend Organization/WebSite/FAQ/Article/Product by page type + validate existing JSON-LD | ✅ 2026-08-12 |
+| **PP-7** | **GA4 narrative lite** | Sessions → top pages → simple “so what” line (no fake revenue unless conversion data exists) | ✅ 2026-08-12 |
+| **PP-8** | **Rec accuracy hardening** | Golden fixtures: Actoro + privacy + complete page; tests that recommendations don’t contradict page evidence | ✅ 2026-08-12 |
+| **PP-H** | **Host / OAuth (owner)** | HTTPS deploy + Google Publish — parallel, not blocked by PP build | ⏸ owner |
+
+```text
+PP-0 Truth defaults → PP-1 Schedules UI → PP-2 Analyzer drill-down
+  → PP-3 Keywords UI → PP-4 Rank UX → PP-5 Backlinks (funded)
+  → PP-6 Schema advisor → PP-7 GA4 narrative → PP-8 Rec fixtures
+  ‖ parallel: PP-H owner host + OAuth + DataForSEO balance
+```
+
+### PP-0 checklist (current)
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Raise dashboard default `max_pages` + label quick vs full | ✅ |
+| 2 | PageSpeed strategy default mobile when enabled | ✅ (`PAGESPEED_STRATEGY=mobile` + UI On—mobile) |
+| 3 | Standardize DataForSEO 402 / skip messaging on dashboard | ✅ |
+| 4 | Recommendations: require evidence fields in top issues/recs rendering | ✅ |
+| 5 | Sync `understand.md` + `i` help for new defaults | ✅ |
+
+### Owner dependencies
+
+| Item | Why |
+|------|-----|
+| DataForSEO balance / verification | PP-5 backlinks + heavy SERP stay empty/402 without it |
+| HTTPS + OAuth Publish | Real client Connect Google outside Testing |
+| Alert webhook URL (later) | Optional; not required for PP-1 schedules |
+
+### Explicitly still out of Plan Perfect
+
+| Deferred | Where |
+|----------|--------|
+| Stripe / FP-5–6 SaaS | Fast path |
+| Playwright form login | SEO-strong deferred |
+| GEO / Apply / Local | Future |
+| Slack workspace | Future alert channels |
+| heyfixit UI clone | Future client delivery UX |

@@ -107,7 +107,11 @@ class ReportService:
             raise ValueError("Repository is required to load audits by id")
         audit = self.repository.get(audit_id)
         if audit is None:
-            raise KeyError(f"Audit not found: {audit_id}")
+            raise KeyError(
+                f"Audit not found: {audit_id}. "
+                "PDF/report by id only works for saved audits — "
+                "re-run with save=true, or use a saved audit_id from GET /history."
+            )
         return self.generate(audit, fmt, out_path=out_path)
 
     def pdf_bytes(self, artifact: ReportArtifact) -> bytes:

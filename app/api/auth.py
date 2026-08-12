@@ -21,6 +21,7 @@ _PUBLIC_PATH_PREFIXES = (
     # Phase 3 — client-facing surfaces (no API key in browser)
     "/share",
     "/dashboard",
+    "/alerts/status",
 )
 
 
@@ -43,7 +44,7 @@ def _extract_api_key(request: Request) -> str | None:
 
 def is_public_path(path: str) -> bool:
     path = path.rstrip("/") or "/"
-    if path == "/health":
+    if path == "/" or path == "/health":
         return True
     for prefix in _PUBLIC_PATH_PREFIXES:
         if prefix == "/health":

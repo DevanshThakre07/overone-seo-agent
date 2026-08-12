@@ -1,0 +1,35 @@
+# Local production-like stack for FP-2 Host smoke.
+# Usage:
+#   cp .env.example .env   # fill secrets
+#   docker compose up --build
+#
+# Dashboard: http://localhost:8000/dashboard/ui?url=https://actoro.app/
+
+services:
+  seo-api:
+    build: .
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      PORT: "8000"
+      SEO_STORAGE_PATH: /data/audits.db
+      GSC_TOKEN_DB_PATH: /data/gsc_tokens.db
+      SEO_PLAYWRIGHT_ENABLED: "true"
+      # Override redirect when testing compose behind localhost
+      # GSC_REDIRECT_URI: http://localhost:8000/auth/callback
+    volumes:
+      - seo_data:/data
+      # Keep OAuth tokens in sync with local Connect Google (host file)
+      - ./data/gsc_tokens.db:/data/gsc_tokens.db
+      - ./secrets:/app/secrets:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+volumes:
+  seo_data:

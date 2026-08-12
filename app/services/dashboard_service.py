@@ -57,7 +57,7 @@ class DashboardService:
         trends = self.memory.trends(seed, limit=trend_limit)
         history = self._history_entries(seed, limit=trend_limit)
         config = self._config_status()
-        schedules = self._schedules_for(seed)
+        schedules = self._schedules_section(seed)
         gsc_live = self._safe_gsc(gsc_account_id, seed)
         ga4_live = self._safe_ga4(gsc_account_id, ga4_property_id)
 
@@ -99,9 +99,7 @@ class DashboardService:
                     trends.get("message") or "No trend points"
                 ),
                 "history": _filled(history) if history else _blank("No history"),
-                "schedules": _filled(schedules) if schedules else _blank(
-                    "No schedules for this URL"
-                ),
+                "schedules": schedules,
                 "share": _blank("Save an audit first, then POST /report/{id}/share"),
                 "compare": _blank("Need 2+ saved audits — use compare_audits"),
             }
@@ -127,6 +125,17 @@ class DashboardService:
                         "improved_h1": p.improved_h1,
                         "heading_suggestions": (p.heading_suggestions or [])[:6],
                         "keyword_suggestions": (p.keyword_suggestions or [])[:8],
+                        "faq_suggestions": [
+                            {
+                                "question": getattr(f, "question", None)
+                                if not isinstance(f, dict)
+                                else f.get("question"),
+                                "answer": getattr(f, "answer", None)
+                                if not isinstance(f, dict)
+                                else f.get("answer"),
+                            }
+                            for f in (p.faq_suggestions or [])[:3]
+                        ],
                         "notes": (p.notes or [])[:6],
                     }
                 )
@@ -173,24 +182,26 @@ class DashboardService:
             )[:25]
         ]
 
-        # Prefer live GSC match-vs-URL (clearer than a saved no_matching blob).
-        # Keep saved performance snapshot when it is ok for this site.
+        # Prefer live GSC (match + fresh performance). Fall back to saved
+        # snapshot only when live fetch has no snapshot yet.
         gsc_section = gsc_live if gsc_live.get("available") else _filled(gsc_saved)
-        if (
-            isinstance(gsc_saved, dict)
-            and gsc_saved.get("status") == "ok"
-            and gsc_live.get("available")
-            and (gsc_live.get("data") or {}).get("matches_audit_url")
-        ):
-            gsc_section = _filled(
-                {
-                    **(gsc_live.get("data") or {}),
-                    "snapshot": gsc_saved.get("snapshot") or gsc_saved,
-                    "status": "ok",
-                    "matched_site_url": gsc_saved.get("matched_site_url")
-                    or (gsc_live.get("data") or {}).get("matched_site_url"),
-                }
-            )
+        live_data = (gsc_live.get("data") or {}) if gsc_live.get("available") else {}
+        live_snap = live_data.get("snapshot") if isinstance(live_data, dict) else None
+        saved_ok = isinstance(gsc_saved, dict) and gsc_saved.get("status") == "ok"
+        if gsc_live.get("available") and live_data.get("matches_audit_url"):
+            if live_snap:
+                gsc_section = _filled({**live_data, "status": "ok"})
+            elif saved_ok:
+                gsc_section = _filled(
+                    {
+                        **live_data,
+                        "snapshot": gsc_saved.get("snapshot") or gsc_saved,
+                        "snapshot_source": "saved_audit",
+                        "status": "ok",
+                        "matched_site_url": gsc_saved.get("matched_site_url")
+                        or live_data.get("matched_site_url"),
+                    }
+                )
 
         # Prefer live GA4 when available (fresh + preferred property).
         ga4_section = ga4_live if ga4_live.get("available") else _filled(ga4_saved)
@@ -249,7 +260,7 @@ class DashboardService:
             if optimization
             else _blank("No optimize run on this audit"),
             "keyword_plan": _blank(
-                "Placement plans are on-demand — Hermes keyword_plan / API"
+                "Click Get keyword placement on the dashboard (or Hermes keyword_plan)"
             ),
             "login_wall": _filled((summary.get("crawl_auth") or {}).get("login_wall"))
             if (summary.get("crawl_auth") or {}).get("login_wall")
@@ -264,19 +275,35 @@ class DashboardService:
                             "analyzer": r.analyzer,
                             "issue_count": len(r.issues),
                             "error": r.error,
+                            "metrics": {
+                                k: v
+                                for k, v in (r.metrics or {}).items()
+                                if not isinstance(v, (dict, list))
+                            }
+                            if r.metrics
+                            else {},
+                            "issues": [
+                                {
+                                    "code": i.code,
+                                    "severity": getattr(i.severity, "value", i.severity),
+                                    "message": i.message,
+                                    "url": i.url,
+                                }
+                                for i in (r.issues or [])[:12]
+                            ],
                         }
                         for r in (latest.analyzer_results or [])
                     ],
                 }
-            ),
+            )
+            if (latest.analyzer_results or summary.get("analyzers_run"))
+            else _blank("No analyzer results on latest audit"),
             "top_issues": _filled(top_issues) if top_issues else _blank("No issues"),
             "trends": _filled(trends) if trends.get("count") else _blank(
                 trends.get("message") or "Need more saved audits"
             ),
             "history": _filled(history) if history else _blank("No history"),
-            "schedules": _filled(schedules) if schedules else _blank(
-                "No schedules — POST /schedules"
-            ),
+            "schedules": schedules,
             "share": _filled(
                 {
                     "audit_id": latest.audit_id,
@@ -351,6 +378,10 @@ class DashboardService:
             "dataforseo_configured": dataforseo_ok,
             "gsc_oauth_configured": gsc_oauth_ok,
             "openai_configured": bool(self.settings.openai_api_key),
+            "alerts_configured": bool(
+                (self.settings.alerts.webhook_url or "").strip()
+            ),
+            "alert_score_drop_threshold": self.settings.alerts.score_drop_threshold,
         }
 
     def _safe_gsc(
@@ -382,20 +413,42 @@ class DashboardService:
                 message = f"Matched property for this URL: {matched}"
             else:
                 message = None
-            return _filled(
-                {
-                    "account_id": account_id,
-                    "email": status.get("email"),
-                    "connected": True,
-                    "sites": sites,
-                    "site_count": sites_payload.get("count") or len(sites),
-                    "seed_url": seed_url,
-                    "matched_site_url": matched,
-                    "matches_audit_url": bool(matched),
-                    "available_sites": site_urls,
-                    "message": message,
-                }
-            )
+            payload: dict[str, Any] = {
+                "account_id": account_id,
+                "email": status.get("email"),
+                "connected": True,
+                "sites": sites,
+                "site_count": sites_payload.get("count") or len(sites),
+                "seed_url": seed_url,
+                "matched_site_url": matched,
+                "matches_audit_url": bool(matched),
+                "available_sites": site_urls,
+                "message": message,
+                "snapshot_source": None,
+            }
+            # Live performance (same idea as GA4) — don't leave the panel on a
+            # stale empty snapshot from an older saved audit.
+            if matched:
+                try:
+                    snap = svc.performance(account_id, matched, days=28, top_n=20)
+                    payload["snapshot"] = snap
+                    payload["snapshot_source"] = "live"
+                    payload["status"] = "ok"
+                    n_q = len((snap or {}).get("top_queries") or [])
+                    n_opp = int((snap or {}).get("opportunity_count") or 0)
+                    if n_q == 0 and n_opp == 0:
+                        payload["message"] = (
+                            f"{message}. Search Console returned no queries in "
+                            "the last 28 days yet (new/low-traffic sites are normal)."
+                        )
+                    elif n_opp == 0:
+                        payload["message"] = (
+                            f"{message}. No page-2 opportunities yet "
+                            "(need queries with impressions on positions ~11–20)."
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    payload["snapshot_error"] = str(exc)
+            return _filled(payload)
         except Exception as exc:  # noqa: BLE001
             return _blank(str(exc))
 
@@ -460,6 +513,14 @@ class DashboardService:
         except Exception:  # noqa: BLE001
             return []
 
+    def _schedules_section(self, seed: str) -> dict[str, Any]:
+        from app.services.alert_service import AlertService
+
+        alerts = AlertService(self.settings).status()
+        rows = self._schedules_for(seed)
+        # Always filled so alert status shows even with zero schedules.
+        return _filled({"items": rows, "alerts": alerts, "count": len(rows)})
+
     def _history_entries(self, seed: str, *, limit: int) -> list[dict[str, Any]]:
         try:
             audits = self.memory.history(seed, limit=limit)
@@ -486,6 +547,9 @@ class DashboardService:
                         "url": rec.get("url"),
                         "code": action.get("code"),
                         "message": action.get("message"),
+                        "current_value": action.get("current_value"),
+                        "suggested_value": action.get("suggested_value"),
+                        "evidence": action.get("evidence"),
                     }
                 )
         snap = gsc.get("snapshot") or {}
@@ -594,6 +658,12 @@ class DashboardService:
                 "label": "Scheduled audits",
                 "configured": True,
                 "has_data": True,
+            },
+            {
+                "id": "alerts",
+                "label": "Schedule alerts",
+                "configured": config.get("alerts_configured"),
+                "has_data": config.get("alerts_configured"),
             },
             {
                 "id": "generate_report",

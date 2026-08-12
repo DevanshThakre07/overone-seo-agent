@@ -158,6 +158,16 @@ class KeywordSettings(BaseModel):
     include_related_in_research: bool = True
 
 
+class AlertSettings(BaseModel):
+    """Outbound monitoring alerts (webhook first; email later)."""
+
+    webhook_url: str | None = None
+    # Fire when score_delta <= -threshold (compare vs previous audit).
+    score_drop_threshold: float = 5.0
+    on_new_critical: bool = True
+    timeout_seconds: float = 10.0
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         # Always load SEO-Agent/.env — Hermes runs with cwd=hermes-agent/, so a
@@ -248,6 +258,16 @@ class Settings(BaseSettings):
         default=None, validation_alias="KEYWORD_INCLUDE_RELATED"
     )
 
+    seo_alert_webhook_url: str | None = Field(
+        default=None, validation_alias="SEO_ALERT_WEBHOOK_URL"
+    )
+    seo_alert_score_drop: float | None = Field(
+        default=None, validation_alias="SEO_ALERT_SCORE_DROP"
+    )
+    seo_alert_on_new_critical: bool | None = Field(
+        default=None, validation_alias="SEO_ALERT_ON_NEW_CRITICAL"
+    )
+
     crawl: CrawlSettings = Field(default_factory=CrawlSettings)
     playwright: PlaywrightSettings = Field(default_factory=PlaywrightSettings)
     analyzer: AnalyzerSettings = Field(default_factory=AnalyzerSettings)
@@ -257,6 +277,7 @@ class Settings(BaseSettings):
     gsc: GoogleSearchConsoleSettings = Field(default_factory=GoogleSearchConsoleSettings)
     pagespeed: PageSpeedSettings = Field(default_factory=PageSpeedSettings)
     keywords: KeywordSettings = Field(default_factory=KeywordSettings)
+    alerts: AlertSettings = Field(default_factory=AlertSettings)
 
     @classmethod
     def from_yaml(cls, path: Path | None = None) -> Settings:
@@ -276,6 +297,7 @@ class Settings(BaseSettings):
             gsc=GoogleSearchConsoleSettings(**(raw.get("gsc") or {})),
             pagespeed=PageSpeedSettings(**(raw.get("pagespeed") or {})),
             keywords=KeywordSettings(**(raw.get("keywords") or {})),
+            alerts=AlertSettings(**(raw.get("alerts") or {})),
         )
         return settings.apply_env_overrides()
 
@@ -360,6 +382,13 @@ class Settings(BaseSettings):
             self.keywords.related_limit = self.keyword_related_limit
         if self.keyword_include_related is not None:
             self.keywords.include_related_in_research = self.keyword_include_related
+
+        if self.seo_alert_webhook_url is not None:
+            self.alerts.webhook_url = self.seo_alert_webhook_url.strip() or None
+        if self.seo_alert_score_drop is not None:
+            self.alerts.score_drop_threshold = float(self.seo_alert_score_drop)
+        if self.seo_alert_on_new_critical is not None:
+            self.alerts.on_new_critical = bool(self.seo_alert_on_new_critical)
 
         return self
 
