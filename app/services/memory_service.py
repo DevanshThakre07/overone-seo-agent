@@ -62,12 +62,20 @@ class MemoryService:
                 }
             )
         score_delta = None
+        score_delta_vs_previous = None
         if len(points) >= 2:
+            # Window span (oldest → newest in this series).
             score_delta = round(points[-1]["score"] - points[0]["score"], 1)
+            # True "since previous" = last vs immediate prior point.
+            score_delta_vs_previous = round(
+                points[-1]["score"] - points[-2]["score"], 1
+            )
         return {
             "url": seed,
             "count": len(points),
             "score_delta": score_delta,
+            "score_delta_span": score_delta,
+            "score_delta_vs_previous": score_delta_vs_previous,
             "points": points,
             "message": (
                 f"{len(points)} audit(s) for trend."

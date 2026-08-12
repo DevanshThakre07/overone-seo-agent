@@ -171,3 +171,29 @@ def test_audit_serp_requires_keywords():
     service = CompetitiveSeoService(settings)
     skipped = service.audit_serp_enrichment("https://bookasto.com/", [])
     assert skipped["status"] == "skipped"
+
+
+def test_audit_serp_aggregate_error_when_all_checks_fail(monkeypatch):
+    settings = Settings(
+        keywords=KeywordSettings(
+            enabled=True, provider="dataforseo", login="u", password="p"
+        )
+    )
+    service = CompetitiveSeoService(settings)
+
+    def boom(keyword, target, **kwargs):
+        return {
+            "status": "error",
+            "keyword": keyword,
+            "rank": None,
+            "message": "402 Payment Required",
+        }
+
+    monkeypatch.setattr(service, "check_rank", boom)
+    out = service.audit_serp_enrichment(
+        "https://bookasto.com/", ["seo", "books"]
+    )
+    assert out["status"] == "payment_required"
+    assert out["failed_count"] == 2
+    assert out["ranked_count"] == 0
+    assert "ok" != out["status"]

@@ -7,7 +7,7 @@
 > - Companion status notes also live in `docs/GOOGLE_SEARCH_CONSOLE.md` (integrations detail).  
 > - **Two tracks:** **SEO-strong** (priority now) vs **Fast path** (sellable product — kept, starts after SEO-strong gate). Near-term / Future / Capability map stay the full roadmap.  
 > - **IDs to remember:** **S1–S4** = SEO-strong slices; **FP-1–FP-6** = Fast path slices — see **Glossary (S1 / S2 / …)** below.  
-> - Last updated: **2026-08-12** (FP-4 thin client scorecard; HTTPS deploy parked)
+> - Last updated: **2026-08-12** (Module Response Quality — P0 honesty fixes; HTTPS parked)
 
 ---
 
@@ -91,6 +91,7 @@ Discover → Audit → Keywords → Rank/SERP → GSC gaps → Content advice
 | 2026-08-10 | **FP-2 Host packaging** | Dockerfile + compose + `docs/HOSTING.md` + `PORT` env; owner still deploys to cloud |
 | 2026-08-12 | **Plan Perfect PP-0→PP-8** | Truth defaults, schedules UI, analyzer drill-down, keywords/rank UX, schema advisor, GA4 narrative, rec accuracy fixtures (`tests/fixtures/rec_accuracy` + unit tests). PP-5 anchors wait on DataForSEO funds; PP-H owner host/OAuth |
 | 2026-08-12 | **FP-4 Thin client scorecard** | Public `/share/{token}` HTML scorecard (score + top issues + rec peek + PDF); dashboard **Create client scorecard link**; README/allinfo contributor-facing |
+| 2026-08-12 | **Module Response Quality (P0)** | Provisional score labeled on dashboard + scorecard; SERP aggregate not “ok” on total failure; rank errors ≠ “not ranking”; trends since-previous vs window span; dashboard keeps recommendation evidence; `_filled` blanks payment/missing_scope/etc. |
 
 ### What “optimize” means today (explicit)
 
@@ -506,9 +507,9 @@ FP-1 Report trust (= S1) → FP-2 Host → FP-3 OAuth Publish (owner)
 
 | Status | Action |
 |--------|--------|
-| **Active stage** | **Fast path FP-4** thin client delivery (localhost OK) — HTTPS / PP-H **parked** until you deploy |
-| **Now (build)** | FP-4 scorecard share ✅ — next optional: FP-6 lite isolation / polish |
-| **Owner parallel** | When ready: deploy HTTPS → OAuth redirect → Publish; fund DataForSEO (PP-5) |
+| **Active stage** | **Module Response Quality** — honest/complete responses per integrated module (HTTPS parked) |
+| **Now (build)** | P0 shipped (provisional score, SERP/rank error ≠ not ranking, trends delta labels, evidence passthrough) → continue P1 module-by-module |
+| **Owner parallel** | When ready: deploy HTTPS → OAuth; fund DataForSEO (PP-5) |
 | **Still deferred** | Form login; GEO; Apply; Local; Stripe; Slack workspace |
 
 Do **not** create a Slack workspace for alerts now — leave `SEO_ALERT_WEBHOOK_URL` unset until the later channel-setup slice.

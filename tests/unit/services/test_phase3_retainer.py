@@ -44,9 +44,22 @@ def test_trends_series(tmp_path):
     assert trends["points"][0]["score"] == 70
     assert trends["points"][-1]["score"] == 80
     assert trends["score_delta"] == 10.0
+    assert trends["score_delta_span"] == 10.0
+    assert trends["score_delta_vs_previous"] == 10.0
 
 
-def test_schedule_due_and_mark(tmp_path):
+def test_trends_vs_previous_differs_from_span(tmp_path):
+    db = str(tmp_path / "b.db")
+    repo = SqliteAuditRepository(db)
+    mem = MemoryService(repo)
+    url = "https://example.com/span"
+    mem.save(_audit(url, 50))
+    mem.save(_audit(url, 90))
+    mem.save(_audit(url, 80))
+    trends = mem.trends(url, limit=10)
+    assert trends["score_delta_span"] == 30.0  # 80 - 50
+    assert trends["score_delta_vs_previous"] == -10.0  # 80 - 90
+
     db = str(tmp_path / "s.db")
     repo = SqliteScheduleRepository(db)
     row = repo.create("https://example.com/", every_hours=24)

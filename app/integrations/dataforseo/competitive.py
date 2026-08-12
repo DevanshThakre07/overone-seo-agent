@@ -210,19 +210,48 @@ class CompetitiveSeoService:
         checks: list[dict[str, Any]] = []
         for kw in cleaned:
             checks.append(self.check_rank(kw, host, depth=depth))
-        found = sum(1 for c in checks if (c.get("rank") or {}).get("found"))
+        found = sum(
+            1
+            for c in checks
+            if c.get("status") == "ok" and (c.get("rank") or {}).get("found")
+        )
+        ok_n = sum(1 for c in checks if c.get("status") == "ok")
+        err_checks = [c for c in checks if c.get("status") != "ok"]
+        payment = any(
+            "402" in str(c.get("message") or "")
+            or "payment required" in str(c.get("message") or "").lower()
+            for c in err_checks
+        )
+        if ok_n == 0 and err_checks:
+            status = "payment_required" if payment else "error"
+            message = (
+                err_checks[0].get("message")
+                or "SERP/rank checks failed for all keywords."
+            )
+        elif err_checks:
+            status = "partial"
+            message = (
+                f"SERP/rank partial: {ok_n}/{len(checks)} ok for {host}; "
+                f"{len(err_checks)} failed"
+                + (" (DataForSEO payment/billing)" if payment else "")
+                + f"; {found} ranked."
+            )
+        else:
+            status = "ok"
+            message = (
+                f"SERP/rank for {len(checks)} keyword(s); "
+                f"{found} found in top results for {host}."
+            )
         return {
-            "status": "ok",
+            "status": status,
             "provider": "dataforseo",
             "seed_url": seed_url,
             "target_domain": host,
             "keyword_count": len(checks),
             "ranked_count": found,
+            "failed_count": len(err_checks),
             "checks": checks,
-            "message": (
-                f"SERP/rank for {len(checks)} keyword(s); "
-                f"{found} found in top results for {host}."
-            ),
+            "message": message,
         }
 
     def audit_backlinks_enrichment(self, seed_url: str) -> dict[str, Any]:

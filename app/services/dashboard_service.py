@@ -18,22 +18,40 @@ def _blank(reason: str = "") -> dict[str, Any]:
     return {"status": "blank", "available": False, "data": None, "reason": reason}
 
 
-def _filled(data: Any, *, status: str = "ok") -> dict[str, Any]:
-    if data is None:
-        return _blank("No data")
-    if isinstance(data, dict) and data.get("status") in {
+# Statuses that must never look like a successful filled panel.
+_BLANK_STATUSES = frozenset(
+    {
         "skipped",
         "unavailable",
         "error",
         "not_connected",
         "no_matching_property",
-    }:
+        "missing_scope",
+        "payment_required",
+        "fetch_failed",
+        "caller_provided_not_researched",
+    }
+)
+
+
+def _filled(data: Any, *, status: str = "ok") -> dict[str, Any]:
+    if data is None:
+        return _blank("No data")
+    if isinstance(data, dict) and data.get("status") in _BLANK_STATUSES:
         return {
             "status": "blank",
             "available": False,
             "data": None,
             "reason": data.get("message") or data.get("status") or "Unavailable",
             "raw_status": data.get("status"),
+        }
+    # Partial SERP/etc. still show data but keep honest status.
+    if isinstance(data, dict) and data.get("status") == "partial":
+        return {
+            "status": "partial",
+            "available": True,
+            "data": data,
+            "reason": data.get("message") or "Partial results",
         }
     return {"status": status, "available": True, "data": data, "reason": ""}
 
@@ -67,7 +85,7 @@ class DashboardService:
                 "url": seed,
                 "message": (
                     "No saved audits yet. Run an audit with save=true "
-                    "(Hermes audit_site or POST /audit)."
+                    "(Dashboard Run audit or POST /audit)."
                 ),
                 "config": config,
                 "tools": self._tools_catalog(config, None, gsc_live),
@@ -156,12 +174,13 @@ class DashboardService:
             }
 
         rank_checks = []
-        if isinstance(serp, dict) and serp.get("status") == "ok":
+        if isinstance(serp, dict) and serp.get("checks"):
             for check in serp.get("checks") or []:
                 rank_checks.append(
                     {
                         "keyword": check.get("keyword"),
                         "rank": check.get("rank"),
+                        "status": check.get("status"),
                         "message": check.get("message"),
                     }
                 )
@@ -245,6 +264,9 @@ class DashboardService:
                                 {
                                     "code": a.get("code"),
                                     "message": a.get("message"),
+                                    "evidence": a.get("evidence"),
+                                    "current_value": a.get("current_value"),
+                                    "suggested_value": a.get("suggested_value"),
                                 }
                                 for a in (r.get("actions") or [])[:8]
                             ],
@@ -260,7 +282,7 @@ class DashboardService:
             if optimization
             else _blank("No optimize run on this audit"),
             "keyword_plan": _blank(
-                "Click Get keyword placement on the dashboard (or Hermes keyword_plan)"
+                "Click Get keyword placement on the dashboard (POST /keyword-plan)"
             ),
             "login_wall": _filled((summary.get("crawl_auth") or {}).get("login_wall"))
             if (summary.get("crawl_auth") or {}).get("login_wall")

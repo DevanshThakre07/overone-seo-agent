@@ -1783,13 +1783,19 @@
       const score = d.score;
       const tone = scoreTone(score);
       const sev = d.severity || {};
+      const provisional = d.score_status === "provisional" || !!d.score_note;
+      const note = d.score_note
+        ? `<p class="ok-line" style="margin-top:0.65rem">${esc(d.score_note)}</p>`
+        : (provisional
+          ? `<p class="ok-line" style="margin-top:0.65rem">Score is provisional — rendering or crawl was incomplete.</p>`
+          : "");
       el.innerHTML = `
         <div class="score-row">
           <div class="score-ring" style="--p:${Math.max(0, Math.min(100, Number(score) || 0))};--ring-color:${tone.color}">
             <div class="score">${esc(score ?? "—")}</div>
           </div>
           <div class="score-meta">
-            <div class="kicker">${esc(tone.label)} health</div>
+            <div class="kicker">${provisional ? "Provisional" : esc(tone.label)} health</div>
             <p class="muted" style="margin:0">${esc(d.pages ?? 0)} pages crawled · ${esc(d.issues ?? 0)} issues</p>
             <p class="muted" style="margin:0">${esc(d.created_at || "")}</p>
           </div>
@@ -1799,6 +1805,7 @@
           <div class="metric warn"><div class="n">${esc(sev.warning || 0)}</div><div class="l">Warning</div></div>
           <div class="metric"><div class="n">${esc(sev.info || 0)}</div><div class="l">Info</div></div>
         </div>
+        ${note}
         <p class="muted"><code>${esc(d.audit_id || "")}</code></p>`;
     }
 
@@ -1981,17 +1988,25 @@
         chart.appendChild(bar);
       });
       el.appendChild(chart);
-      const delta = d.score_delta;
+      const vsPrev = d.score_delta_vs_previous;
+      const span = d.score_delta_span != null ? d.score_delta_span : d.score_delta;
       const meta = document.createElement("p");
       meta.className = "muted";
-      if (delta == null) {
+      const bits = [];
+      if (vsPrev != null) {
+        if (vsPrev > 0) bits.push(`<span class="delta-up">+${esc(vsPrev)}</span> since previous audit`);
+        else if (vsPrev < 0) bits.push(`<span class="delta-down">${esc(vsPrev)}</span> since previous audit`);
+        else bits.push(`<span class="delta-flat">Flat</span> vs previous audit`);
+      }
+      if (span != null && points.length > 2) {
+        if (span > 0) bits.push(`<span class="delta-up">+${esc(span)}</span> across this window`);
+        else if (span < 0) bits.push(`<span class="delta-down">${esc(span)}</span> across this window`);
+        else bits.push(`<span class="delta-flat">Flat</span> across this window`);
+      }
+      if (!bits.length) {
         meta.textContent = d.message || (points.length + " saved scores");
-      } else if (delta > 0) {
-        meta.innerHTML = `<span class="delta-up">+${esc(delta)}</span> since previous · ${esc(points.length)} points`;
-      } else if (delta < 0) {
-        meta.innerHTML = `<span class="delta-down">${esc(delta)}</span> since previous · ${esc(points.length)} points`;
       } else {
-        meta.innerHTML = `<span class="delta-flat">Flat</span> · ${esc(points.length)} points`;
+        meta.innerHTML = bits.join(" · ") + ` · ${esc(points.length)} points`;
       }
       el.appendChild(meta);
     }
@@ -2163,11 +2178,22 @@
         return;
       }
       el.innerHTML = `<ul class="clean">${rows.map((r) => {
+        const status = String(r.status || "");
+        const err = status && status !== "ok";
+        if (err) {
+          const why = friendlyPaidError(r.message || status);
+          return `<li>
+            <strong>${esc(r.keyword)}</strong>
+            <span class="sev-pill critical">${/402|payment/i.test(why) ? "billing" : "error"}</span>
+            <br><span class="muted">${esc(why)}</span>
+            <br><span class="muted">This is not “not ranking” — the check did not complete successfully.</span>
+          </li>`;
+        }
         const rank = r.rank || {};
         const found = rank.found;
         const label = found
           ? `Position ${esc(rank.position)} on Google (in checked results)`
-          : "Not in the top results we checked — your site did not appear yet for this keyword";
+          : (r.message || "Not in the top results we checked — your site did not appear yet for this keyword");
         return `<li>
           <strong>${esc(r.keyword)}</strong>
           ${found

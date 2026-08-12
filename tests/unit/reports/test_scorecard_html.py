@@ -46,3 +46,18 @@ def test_scorecard_includes_score_and_issues():
     assert "Download PDF" in html
     assert "/share/abc123?format=pdf" in html
     assert "Use a clearer title" in html
+
+
+def test_scorecard_marks_provisional_score():
+    audit = SiteAudit(
+        seed_url="https://actoro.app/",
+        score=55.0,
+        summary={
+            "score_status": "provisional",
+            "score_note": "JS shell unrendered — score is provisional.",
+            "severity_counts": {"critical": 0, "warning": 0, "info": 0},
+        },
+    )
+    html = render_scorecard_html(audit, token="tok", expires_at=None)
+    assert "Provisional" in html
+    assert "directional" in html.lower() or "incomplete" in html.lower()

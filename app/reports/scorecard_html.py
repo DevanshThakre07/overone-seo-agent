@@ -7,6 +7,7 @@ from typing import Any
 
 from app.models.audit import SiteAudit
 from app.models.issues import Severity
+from app.reports.signal_trust import is_provisional_score
 
 
 def render_scorecard_html(
@@ -25,8 +26,17 @@ def render_scorecard_html(
     expires = html.escape(str(expires_at or "—"))
     score = float(audit.score or 0)
     score_label = f"{score:.0f}" if score == int(score) else f"{score:.1f}"
-
     summary = audit.summary or {}
+    provisional = is_provisional_score(summary)
+    score_note = html.escape(str(summary.get("score_note") or ""))
+    provisional_banner = ""
+    if provisional:
+        provisional_banner = (
+            '<p class="banner">Provisional score — crawl/rendering was incomplete. '
+            "Treat this number as directional until a full render succeeds."
+            + (f" {score_note}" if score_note else "")
+            + "</p>"
+        )
     counts = summary.get("severity_counts") or {}
     if not counts:
         counts = {
@@ -223,6 +233,10 @@ def render_scorecard_html(
     .msg {{ display: block; margin-top: 0.15rem; }}
     .url, .page {{ display: block; color: var(--muted); font-size: 0.82rem; word-break: break-all; }}
     .empty {{ color: var(--muted); margin: 0; }}
+    .banner {{
+      background: #fff6e5; border: 1px solid #e6d3a4; color: #6a4b00;
+      border-radius: 8px; padding: 0.75rem 0.9rem; margin: 0 0 1rem; font-size: 0.92rem;
+    }}
     footer {{
       margin-top: 1.25rem; color: var(--muted); font-size: 0.82rem;
     }}
@@ -230,8 +244,9 @@ def render_scorecard_html(
 </head>
 <body>
   <div class="wrap">
+    {provisional_banner}
     <header class="hero">
-      <div class="ring" aria-label="SEO score {score_label}">
+      <div class="ring" aria-label="SEO score {score_label}{' provisional' if provisional else ''}">
         <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
           <circle cx="60" cy="60" r="54" fill="none" stroke="#d5e0db" stroke-width="10" />
           <circle cx="60" cy="60" r="54" fill="none" stroke="#0f6b5c" stroke-width="10"
@@ -241,7 +256,7 @@ def render_scorecard_html(
         <div class="val">{html.escape(score_label)}</div>
       </div>
       <div>
-        <p class="brand">SEO Scorecard</p>
+        <p class="brand">SEO Scorecard{' · Provisional' if provisional else ''}</p>
         <h1>{seed}</h1>
         <p class="sub">Audit <code>{audit_id}</code> · {pages_n} pages · created {created}</p>
         <div class="cta">
