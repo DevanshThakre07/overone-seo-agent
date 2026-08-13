@@ -95,6 +95,7 @@ Discover → Audit → Keywords → Rank/SERP → GSC gaps → Content advice
 | 2026-08-12 | **Module Response Quality (P1)** | PageSpeed field/origin CrUX chips; login wall / auth crawl / rendering dedicated panels; compare shows score_delta + new/resolved; tools catalog `has_data` from real counts |
 | 2026-08-12 | **Module Response Quality (P2)** | GSC listed-query totals labeled (not site-wide); alerts `last` fire/delivery in status + schedules UI; caller keywords shown without fake volume |
 | 2026-08-12 | **Dashboard UX quality** | Workflow strip; sticky controls; advanced actions fold; zoned results; Ready/Partial/Not run badges; descriptive panel copy + next-step empties |
+| 2026-08-13 | **FP-6 Client isolation (lite)** | `SEO_API_CLIENTS` maps account_id→key; admin `SEO_API_KEY` wildcard; `/auth/me`; enforce on GSC/GA4/dashboard/audit/schedules; `/dashboard` JSON no longer public (UI shell stays) |
 
 ### What “optimize” means today (explicit)
 
@@ -388,7 +389,7 @@ Plain-English cheat sheet so “S1 Report trust” still makes sense months from
 | **FP-3** | OAuth Production | Google Cloud Publish so clients can Connect Google outside Testing. |
 | **FP-4** | Thin client delivery | One flow: audit → scorecard → PDF (no heyfixit clone). |
 | **FP-5** | Billing | Stripe Checkout so clients can pay online. |
-| **FP-6** | Client isolation | Per-client `account_id` / API key boundaries. |
+| **FP-6** | Client isolation | Per-client `account_id` / API key boundaries. ✅ lite shipped 2026-08-13. |
 
 #### Other labels you’ll see
 
@@ -438,7 +439,7 @@ Owner (2026-08-10): strengthen SEO first; client-narrative dashboard and monetiz
 | Client delivery UX | Scorecard + Audit / Diagnose / Fix / Track tabs (real data only; blank when missing) | ⏸ production |
 | **Alert channels** | Wire `SEO_ALERT_WEBHOOK_URL` (Slack / Discord / custom) + dry-run; optional email after | ⏸ **later** (owner 2026-08-10 — skip Slack/workspace for now) |
 | Monitoring alerts (productized) | Multi-channel packaging / client-facing alert prefs | ⏸ production |
-| Multi-client isolation | API keys / account_id boundaries for multiple clients | ⏸ production |
+| Multi-client isolation | API keys / account_id boundaries for multiple clients | ✅ FP-6 lite shipped — deepen later (audit row tenancy, signed OAuth start) |
 | Share + PDF retainer handoff polish | Already shipped basics; packaging for paid clients | ⏸ production |
 | **GEO (E)** | AI citations / generative visibility — keep on roadmap; validate before build | ⏸ planned |
 | **Apply (C)** | CMS / Git PR / paste packs — hard consent rules first | ⏸ awaiting validate |
@@ -473,7 +474,7 @@ Pay → Connect Google → Run audit → Dashboard scorecard → Download / shar
 | FP-3 | **OAuth Production** | Google Cloud Publish + env (`GSC_OAUTH_PUBLISHING_STATUS=production`) — mostly owner | ⏸ after SEO-strong (code/docs ✅) |
 | FP-4 | **Thin client delivery** | One flow: audit → scorecard → PDF share (reuse dashboard/share; **no** Spy/Fixer/heyfixit clone) | ✅ 2026-08-12 (`/share/{token}` scorecard + dashboard create link) |
 | FP-5 | **Billing** | Stripe Checkout — one plan / per-site (or simple retainer SKU) | ⏸ after SEO-strong |
-| FP-6 | **Client isolation** | Per-client `account_id` / API key boundaries (enough to sell; not full IAM) | ⏸ after SEO-strong |
+| FP-6 | **Client isolation** | Per-client `account_id` / API key boundaries (enough to sell; not full IAM) | ✅ lite 2026-08-13 (`SEO_API_CLIENTS` + `/auth/me`) |
 
 ### Explicitly out of Fast path *(keep on full roadmap)*
 

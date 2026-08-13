@@ -6,69 +6,111 @@
   <title>SEO Agent Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #dfe8e4;
-      --ink: #0f1714;
-      --muted: #5a6560;
-      --line: #b9c9c1;
-      --panel: #f5faf7;
-      --panel-2: #eef6f1;
-      --accent: #045c4e;
-      --accent-soft: #cfe8df;
+      --bg: #d4e0da;
+      --ink: #0c1612;
+      --muted: #4f5d57;
+      --line: #aec2b7;
+      --panel: #f7fbf9;
+      --panel-2: #eaf4ef;
+      --accent: #0a5c4c;
+      --accent-deep: #063f35;
+      --accent-soft: #d4ece3;
       --good: #0a6b52;
-      --warn: #a15c12;
+      --warn: #9a5610;
       --bad: #b42318;
       --info: #1f4b6e;
-      --blank: #7a8680;
-      --score-track: #d3e0da;
+      --blank: #6f7c75;
+      --score-track: #c9d8d0;
+      --lift: 0 10px 28px rgba(12, 22, 18, 0.07);
+      --radius: 4px;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Figtree", sans-serif;
+      font-family: "Sora", sans-serif;
       color: var(--ink);
-      background:
-        radial-gradient(ellipse 70% 50% at 0% 0%, rgba(4, 92, 78, 0.12), transparent 55%),
-        radial-gradient(ellipse 55% 40% at 100% 8%, rgba(31, 75, 110, 0.1), transparent 50%),
-        repeating-linear-gradient(-12deg, transparent, transparent 11px, rgba(15, 23, 20, 0.015) 11px, rgba(15, 23, 20, 0.015) 12px),
-        var(--bg);
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse 90% 55% at 8% -10%, rgba(10, 92, 76, 0.22), transparent 58%),
+        radial-gradient(ellipse 60% 45% at 96% 0%, rgba(31, 75, 110, 0.14), transparent 52%),
+        radial-gradient(ellipse 50% 35% at 70% 100%, rgba(10, 92, 76, 0.08), transparent 55%),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      background-attachment: fixed;
       min-height: 100vh;
     }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem 3.5rem; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem 4rem; }
     header {
       display: grid;
-      gap: 0.55rem;
-      padding-bottom: 1.35rem;
-      border-bottom: 1px solid var(--line);
-      margin-bottom: 1.1rem;
-      animation: rise 0.55s ease both;
+      gap: 0.65rem;
+      padding: 0.35rem 0 1.5rem;
+      margin-bottom: 1.2rem;
+      border-bottom: 1px solid transparent;
+      border-image: linear-gradient(90deg, var(--accent), rgba(174, 194, 183, 0.35) 42%, transparent) 1;
+      animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .brand-mark {
+      width: 3rem;
+      height: 3rem;
+      flex-shrink: 0;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(145deg, #0f7460 0%, var(--accent) 48%, var(--accent-deep) 100%);
+      color: #eefaf5;
+      display: grid;
+      place-items: center;
+      font-family: "Fraunces", Georgia, serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.04em;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
+      animation: markIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
     header .brand {
       font-family: "Fraunces", Georgia, serif;
-      font-size: clamp(2.15rem, 4.2vw, 2.9rem);
+      font-size: clamp(2.25rem, 4.4vw, 3.05rem);
       font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.02;
+      letter-spacing: -0.035em;
+      line-height: 0.98;
       color: var(--ink);
     }
-    header p { margin: 0; color: var(--muted); max-width: 42rem; font-size: 1.02rem; line-height: 1.5; }
+    header .brand em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    header p { margin: 0; color: var(--muted); max-width: 40rem; font-size: 1.02rem; line-height: 1.55; }
     .quality-strip {
       display: grid;
-      gap: 0.75rem;
-      margin: 0 0 1.15rem;
-      padding: 0.95rem 1.05rem;
-      border: 1px solid var(--line);
-      border-radius: 3px;
+      gap: 0.8rem;
+      margin: 0 0 1.2rem;
+      padding: 1.1rem 1.15rem 1.2rem;
+      border: 1px solid rgba(174, 194, 183, 0.9);
+      border-radius: var(--radius);
       background:
-        linear-gradient(120deg, rgba(207, 232, 223, 0.55), transparent 42%),
-        linear-gradient(165deg, #f8fcfa, var(--panel));
-      animation: rise 0.55s ease 0.04s both;
+        linear-gradient(115deg, rgba(212, 236, 227, 0.85) 0%, transparent 38%),
+        linear-gradient(165deg, #fbfffd 0%, var(--panel) 55%, var(--panel-2) 100%);
+      box-shadow: var(--lift);
+      animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+      position: relative;
+      overflow: hidden;
+    }
+    .quality-strip::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), #1f4b6e 55%, transparent);
     }
     .quality-strip .qs-title {
       font-family: "Fraunces", Georgia, serif;
-      font-size: 1.15rem;
+      font-size: 1.28rem;
       font-weight: 700;
       letter-spacing: -0.02em;
       margin: 0;
@@ -76,14 +118,14 @@
     .quality-strip .qs-desc {
       margin: 0;
       color: var(--muted);
-      font-size: 0.9rem;
-      line-height: 1.45;
+      font-size: 0.92rem;
+      line-height: 1.5;
       max-width: 46rem;
     }
     .qs-steps {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0.55rem;
+      gap: 0.6rem;
       margin: 0;
       padding: 0;
       list-style: none;
@@ -92,17 +134,23 @@
       .qs-steps { grid-template-columns: 1fr 1fr; }
     }
     .qs-steps li {
-      background: rgba(255,255,255,0.72);
-      border: 1px solid rgba(185, 201, 193, 0.85);
-      border-radius: 2px;
-      padding: 0.55rem 0.65rem;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(174, 194, 183, 0.85);
+      border-radius: var(--radius);
+      padding: 0.65rem 0.7rem;
       min-height: 100%;
+      transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    }
+    .qs-steps li:hover {
+      border-color: #7eaa9a;
+      transform: translateY(-2px);
+      background: #fff;
     }
     .qs-steps .n {
       display: inline-grid;
       place-items: center;
-      width: 1.25rem;
-      height: 1.25rem;
+      width: 1.3rem;
+      height: 1.3rem;
       border-radius: 50%;
       background: var(--accent);
       color: #f2fffb;
@@ -125,19 +173,22 @@
       position: sticky;
       top: 0;
       z-index: 40;
-      margin: 0 -0.35rem 1rem;
-      padding: 0.55rem 0.35rem 0.75rem;
-      background: linear-gradient(180deg, rgba(223, 232, 228, 0.96) 55%, rgba(223, 232, 228, 0.72));
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid rgba(185, 201, 193, 0.55);
+      margin: 0 -0.35rem 1.1rem;
+      padding: 0.65rem 0.45rem 0.85rem;
+      background: linear-gradient(180deg, rgba(212, 224, 218, 0.94) 40%, rgba(212, 224, 218, 0.72));
+      backdrop-filter: blur(12px) saturate(1.15);
+      border-bottom: 1px solid rgba(174, 194, 183, 0.65);
+      box-shadow: 0 8px 20px rgba(12, 22, 18, 0.04);
     }
     .advanced-fold {
       margin: 0 0 1.15rem;
       border: 1px solid var(--line);
-      border-radius: 3px;
-      background: rgba(245, 250, 247, 0.75);
-      animation: rise 0.55s ease 0.08s both;
+      border-radius: var(--radius);
+      background: rgba(247, 251, 249, 0.88);
+      animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+      transition: border-color 0.2s ease;
     }
+    .advanced-fold:hover { border-color: #8fb5a6; }
     .advanced-fold > summary {
       cursor: pointer;
       list-style: none;
@@ -177,14 +228,16 @@
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      padding: 0.35rem 0.6rem;
-      border-radius: 2px;
+      padding: 0.38rem 0.65rem;
+      border-radius: var(--radius);
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.78);
       font-size: 0.78rem;
       font-weight: 650;
       color: var(--muted);
+      transition: transform 0.15s ease, border-color 0.15s ease;
     }
+    .signal-pill:hover { transform: translateY(-1px); }
     .signal-pill b { color: var(--ink); font-family: "Fraunces", Georgia, serif; font-size: 0.95rem; }
     .signal-pill.ready { border-color: #8fbfad; background: var(--accent-soft); color: var(--good); }
     .signal-pill.partial { border-color: #e0c08a; background: #fef6e8; color: var(--warn); }
@@ -195,7 +248,8 @@
       display: grid;
       grid-template-columns: repeat(12, 1fr);
       gap: 1rem;
-      margin: 0 0 0.35rem;
+      margin: 0 0 1.1rem;
+      padding-top: 0.35rem;
     }
     .zone-head {
       grid-column: 1 / -1;
@@ -204,22 +258,35 @@
       align-items: end;
       justify-content: space-between;
       gap: 0.5rem 1rem;
-      padding: 0.35rem 0.15rem 0.15rem;
-      margin-top: 0.35rem;
+      padding: 0.55rem 0.2rem 0.45rem;
+      margin-top: 0.55rem;
+      border-bottom: 1px solid rgba(174, 194, 183, 0.55);
     }
     .zone-head h3 {
       margin: 0;
       font-family: "Fraunces", Georgia, serif;
-      font-size: 1.2rem;
+      font-size: 1.35rem;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.025em;
+      position: relative;
+      padding-left: 0.7rem;
+    }
+    .zone-head h3::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.2em;
+      bottom: 0.15em;
+      width: 3px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--accent), #1f4b6e);
     }
     .zone-head p {
       margin: 0;
       color: var(--muted);
-      font-size: 0.88rem;
-      max-width: 36rem;
-      line-height: 1.4;
+      font-size: 0.9rem;
+      max-width: 38rem;
+      line-height: 1.45;
     }
     .status-badge {
       display: inline-flex;
@@ -268,38 +335,51 @@
     label { display: grid; gap: 0.32rem; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
     input, select {
       min-width: min(100%, 18rem);
-      padding: 0.62rem 0.78rem;
+      padding: 0.68rem 0.82rem;
       border: 1px solid var(--line);
       background: #fff;
       font: inherit;
       color: var(--ink);
-      border-radius: 2px;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      border-radius: var(--radius);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
     }
+    input:hover, select:hover { border-color: #8fb5a6; }
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(4, 92, 78, 0.15);
+      box-shadow: 0 0 0 3px rgba(10, 92, 76, 0.16);
     }
     button {
-      padding: 0.68rem 1.15rem;
+      padding: 0.72rem 1.2rem;
       border: 0;
-      background: var(--accent);
+      background: linear-gradient(180deg, #0d6d5a 0%, var(--accent) 55%, var(--accent-deep) 100%);
       color: #f2fffb;
       font: inherit;
       font-weight: 650;
+      letter-spacing: 0.01em;
       cursor: pointer;
-      border-radius: 2px;
-      transition: transform 0.12s ease, background 0.15s ease;
+      border-radius: var(--radius);
+      transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
     }
-    button:hover { background: #03483d; }
-    button:active { transform: translateY(1px); }
+    button:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(6, 63, 53, 0.18), inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+    button:active { transform: translateY(1px); filter: brightness(0.98); }
     button.secondary {
       background: transparent;
       color: var(--accent);
       border: 1px solid var(--accent);
+      box-shadow: none;
+      filter: none;
     }
-    button.secondary:hover { background: var(--accent-soft); }
+    button.secondary:hover {
+      background: var(--accent-soft);
+      filter: none;
+      box-shadow: none;
+    }
     button.ghost {
       background: transparent;
       color: var(--muted);
@@ -315,12 +395,13 @@
     }
     .chip {
       font-size: 0.74rem;
-      padding: 0.3rem 0.55rem;
+      padding: 0.32rem 0.58rem;
       border: 1px solid var(--line);
-      background: rgba(245, 250, 247, 0.9);
+      background: rgba(247, 251, 249, 0.95);
       color: var(--muted);
       font-weight: 500;
-      border-radius: 2px;
+      border-radius: var(--radius);
+      transition: border-color 0.15s ease, background 0.15s ease;
     }
     .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
     .chip.off { opacity: 0.65; }
@@ -338,29 +419,52 @@
       .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
     }
     section.panel {
-      background: linear-gradient(165deg, #f8fcfa 0%, var(--panel) 55%, var(--panel-2) 100%);
-      border: 1px solid var(--line);
-      padding: 1.05rem 1.15rem 1.2rem;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.55), transparent 28%),
+        linear-gradient(165deg, #fbfffd 0%, var(--panel) 52%, var(--panel-2) 100%);
+      border: 1px solid rgba(174, 194, 183, 0.95);
+      padding: 1.1rem 1.2rem 1.25rem;
       min-height: 8rem;
-      border-radius: 3px;
-      animation: rise 0.5s ease both;
-      transition: border-color 0.2s ease;
+      border-radius: var(--radius);
+      animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+      transition: border-color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.65) inset;
+      position: relative;
     }
-    section.panel:hover { border-color: #9bb5aa; }
+    section.panel::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0.85rem; bottom: 0.85rem;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: transparent;
+      transition: background 0.22s ease;
+    }
+    section.panel:hover {
+      border-color: #7eaa9a;
+      transform: translateY(-2px);
+      box-shadow: var(--lift);
+    }
+    section.panel:hover::before {
+      background: linear-gradient(180deg, var(--accent), #1f4b6e);
+    }
     .panel-head {
       display: flex;
+      flex-wrap: wrap;
       align-items: baseline;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: 0.45rem 0.75rem;
       margin-bottom: 0.85rem;
       padding-bottom: 0.55rem;
       border-bottom: 1px solid rgba(185, 201, 193, 0.65);
     }
     .panel-head-left {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 0.4rem;
       min-width: 0;
+      flex: 1 1 auto;
     }
     .info-btn {
       flex-shrink: 0;
@@ -451,6 +555,10 @@
       font-weight: 500;
       letter-spacing: 0.02em;
       text-align: right;
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 100%;
+      line-height: 1.35;
     }
     .score-row {
       display: flex;
@@ -460,26 +568,29 @@
     }
     .score-ring {
       --p: 0;
-      width: 5.4rem;
-      height: 5.4rem;
+      width: 5.8rem;
+      height: 5.8rem;
       border-radius: 50%;
       background: conic-gradient(var(--ring-color, var(--accent)) calc(var(--p) * 1%), var(--score-track) 0);
       display: grid;
       place-items: center;
       flex-shrink: 0;
       position: relative;
+      animation: ringPop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      box-shadow: 0 0 0 6px rgba(10, 92, 76, 0.06);
     }
     .score-ring::before {
       content: "";
       position: absolute;
       inset: 8px;
       border-radius: 50%;
-      background: var(--panel);
+      background: linear-gradient(165deg, #fff, var(--panel));
+      box-shadow: inset 0 1px 2px rgba(12, 22, 18, 0.04);
     }
     .score-ring .score {
       position: relative;
       font-family: "Fraunces", Georgia, serif;
-      font-size: 1.85rem;
+      font-size: 1.95rem;
       font-weight: 700;
       line-height: 1;
     }
@@ -493,15 +604,25 @@
     }
     .metrics {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(6.75rem, 1fr));
       gap: 0.55rem;
       margin: 0.65rem 0 0.85rem;
     }
+    .metrics.metrics-compact {
+      grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
+    }
     .metric {
-      background: rgba(255, 255, 255, 0.55);
-      border: 1px solid rgba(185, 201, 193, 0.7);
-      padding: 0.55rem 0.6rem;
-      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(174, 194, 183, 0.75);
+      padding: 0.6rem 0.65rem;
+      border-radius: var(--radius);
+      min-width: 0;
+      overflow: hidden;
+      transition: border-color 0.18s ease, transform 0.18s ease;
+    }
+    .metric:hover {
+      border-color: #7eaa9a;
+      transform: translateY(-1px);
     }
     .metric .n {
       font-family: "Fraunces", Georgia, serif;
@@ -509,6 +630,7 @@
       font-weight: 700;
       line-height: 1.1;
       color: var(--ink);
+      overflow-wrap: anywhere;
     }
     .metric .l {
       margin-top: 0.15rem;
@@ -517,6 +639,8 @@
       letter-spacing: 0.05em;
       color: var(--muted);
       font-weight: 600;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
     }
     .metric.bad .n { color: var(--bad); }
     .metric.warn .n { color: var(--warn); }
@@ -646,9 +770,43 @@
     .delta-down { color: var(--bad); font-weight: 650; }
     .delta-flat { color: var(--muted); font-weight: 650; }
     code { font-size: 0.84em; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 0.15rem;
+    }
+    .table-scroll table { min-width: 32rem; }
     table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-    th, td { text-align: left; padding: 0.45rem 0.3rem; border-bottom: 1px solid rgba(185, 201, 193, 0.6); vertical-align: top; }
+    th, td {
+      text-align: left;
+      padding: 0.45rem 0.4rem;
+      border-bottom: 1px solid rgba(185, 201, 193, 0.6);
+      vertical-align: top;
+      word-break: break-word;
+    }
     th { color: var(--muted); font-weight: 650; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    td .sev-pill {
+      margin-right: 0;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+    td.risk-cell {
+      white-space: nowrap;
+    }
+    td.risk-cell .risk-score {
+      display: inline-block;
+      min-width: 1.5rem;
+      margin-right: 0.35rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+    }
+    td code {
+      display: inline-block;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-all;
+    }
     .chart {
       display: flex; align-items: end; gap: 0.4rem;
       height: 120px; margin-top: 0.5rem;
@@ -673,6 +831,11 @@
       min-height: 0;
       background: rgba(245, 250, 247, 0.7);
     }
+    section.panel.collapsed-opt:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    section.panel.collapsed-opt:hover::before { background: transparent; }
     section.panel.collapsed-opt .opt-toggle {
       margin: 0;
       background: none;
@@ -852,18 +1015,41 @@
     .w-lg { width: min(100%, 22rem); }
     .w-full { width: 100%; flex: 1 1 100%; }
     a { color: var(--accent); font-weight: 600; }
-    a:hover { color: #03483d; }
+    a:hover { color: var(--accent-deep); }
     #status, #auditResult { line-height: 1.45; }
+    .bar { animation: barGrow 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
     @keyframes rise {
-      from { opacity: 0; transform: translateY(8px); }
+      from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes markIn {
+      from { opacity: 0; transform: scale(0.86) rotate(-6deg); }
+      to { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+    @keyframes ringPop {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes barGrow {
+      from { transform: scaleY(0.35); transform-origin: bottom; opacity: 0.55; }
+      to { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <div class="brand">SEO Agent</div>
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true">SA</div>
+        <div class="brand">SEO <em>Agent</em></div>
+      </div>
       <p>
         Descriptive SEO for one site: crawl health, Google demand, traffic, and on-page advice —
         with honest empty states when a signal was not run. Nothing here invents rankings or revenue.
@@ -1857,7 +2043,7 @@
       serp: { title: "SERP", subtitle: "Who ranks today", span: "span-4", desc: "Top organic competitors for your tracked keywords (paid opt-in).", fn: null },
       rank: { title: "Rank check", subtitle: "Your positions", span: "span-4", desc: "Where this site ranks now. Billing/API errors are labeled — never as “not ranking.”", fn: null },
       rank_history: { title: "Rank history", subtitle: "Positions over time", span: "span-6", desc: "Position checks across dates. Dashes mean not found in that SERP slice.", fn: null },
-      backlinks: { title: "Backlinks", subtitle: "Risk & referring domains", span: "span-6", desc: "Link profile snapshot with spam risk. Needs DataForSEO funds.", fn: null },
+      backlinks: { title: "Backlinks", subtitle: "Risk & referring domains", span: "span-12", desc: "Link profile snapshot with spam risk. Needs DataForSEO funds.", fn: null },
       optimization: { title: "Optimize advice", subtitle: "Copy-ready rewrites", span: "span-6", desc: "LLM title/meta/H1 suggestions grounded in extracted page facts.", fn: null },
       keyword_plan: { title: "Keyword placement", subtitle: "On-page slots", span: "span-6", desc: "Where each keyword should appear on the page (not Google rank).", fn: null },
       login_wall: { title: "Login wall", subtitle: "Access probe", span: "span-3", desc: "Whether the URL looks gated behind login.", fn: null },
@@ -1915,7 +2101,7 @@
         let path = "/dashboard?url=" + encodeURIComponent(url) + "&trend_limit=16";
         if (gsc) path += "&gsc_account_id=" + encodeURIComponent(gsc);
         if (ga4) path += "&ga4_property_id=" + encodeURIComponent(ga4);
-        const res = await fetch(path);
+        const res = await fetch(path, { headers: apiHeaders() });
         const text = await res.text();
         if (!res.ok) throw new Error(text.slice(0, 300) || ("HTTP " + res.status));
         let data;
@@ -2070,7 +2256,7 @@
           if (!block.available) {
             if (COLLAPSE_WHEN_BLANK.has(key)) {
               section.classList.add("collapsed-opt", "span-3");
-              section.classList.remove("span-4", "span-6");
+              section.classList.remove("span-4", "span-6", "span-12");
               body.innerHTML = `<button type="button" class="opt-toggle">Not run — ${esc(block.reason || "opt-in on audit")} · expand</button>`;
               body.querySelector(".opt-toggle").addEventListener("click", () => {
                 body.innerHTML = emptyState(
@@ -2708,35 +2894,36 @@
       el.innerHTML = `
         <p class="muted" style="margin-top:0">Target <code>${esc(d.target || sum.target || "")}</code>
           ${d.is_real_research ? '<span class="sev-pill ok">live DataForSEO</span>' : ""}</p>
-        <div class="metrics">
+        <div class="metrics metrics-compact">
           <div class="metric"><div class="n">${esc(sum.backlinks ?? "—")}</div><div class="l">Backlinks</div></div>
-          <div class="metric"><div class="n">${esc(sum.referring_domains ?? "—")}</div><div class="l">Domains</div></div>
+          <div class="metric"><div class="n">${esc(sum.referring_domains ?? "—")}</div><div class="l">Ref. domains</div></div>
           <div class="metric"><div class="n">${esc(sum.rank ?? "—")}</div><div class="l">DFS rank</div></div>
           <div class="metric ${targetSpam.sev === "critical" || targetSpam.sev === "warning" ? (targetSpam.sev === "critical" ? "bad" : "warn") : ""}">
             <div class="n">${esc(info.target_spam_score ?? "—")}</div><div class="l">Target spam</div>
           </div>
           <div class="metric ${high ? "bad" : elevated ? "warn" : ""}">
-            <div class="n">${esc(avg ?? "—")}</div><div class="l">Avg ref spam</div>
+            <div class="n">${esc(avg ?? "—")}</div><div class="l">Avg ref. spam</div>
           </div>
-          <div class="metric"><div class="n">${esc(sum.broken_backlinks ?? 0)}</div><div class="l">Broken</div></div>
+          <div class="metric"><div class="n">${esc(sum.broken_backlinks ?? 0)}</div><div class="l">Broken links</div></div>
         </div>
         ${verdict}
         <div class="list-block"><div class="lb-title">Referring domains — help or hurt?</div>
+          <div class="table-scroll">
           <table><thead><tr>
-            <th>Domain</th><th>Links</th><th>Spam</th><th>Risk</th><th>DFS rank</th><th>First seen</th>
+            <th>Domain</th><th>Links</th><th>Risk</th><th>DFS rank</th><th>First seen</th>
           </tr></thead><tbody>
           ${refs.slice(0, 12).map((r) => {
             const risk = spamRisk(r.backlinks_spam_score);
             return `<tr>
               <td><code>${esc(r.domain)}</code></td>
               <td>${esc(r.backlinks ?? "—")}</td>
-              <td>${esc(risk.n ?? "—")}</td>
-              <td><span class="sev-pill ${risk.sev}">${esc(risk.label)}</span></td>
+              <td class="risk-cell"><span class="risk-score">${esc(risk.n ?? "—")}</span><span class="sev-pill ${risk.sev}">${esc(risk.label)}</span></td>
               <td>${esc(r.rank ?? "—")}</td>
               <td class="muted">${esc((r.first_seen || "").toString().slice(0, 10) || "—")}</td>
             </tr>`;
-          }).join("") || `<tr><td colspan="6" class="muted">No referring domains in snapshot</td></tr>`}
+          }).join("") || `<tr><td colspan="5" class="muted">No referring domains in snapshot</td></tr>`}
           </tbody></table>
+          </div>
         </div>
         <p class="muted">Spam score is DataForSEO’s 0–100 risk signal on the referring domain (≥60 = high risk). DFS rank is their authority-style estimate (higher is stronger). Anchor-text distribution is not in this summary snapshot.</p>
         ${d.message ? `<p class="muted">${esc(d.message)}</p>` : ""}`;

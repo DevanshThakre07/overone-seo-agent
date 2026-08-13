@@ -202,6 +202,11 @@ class Settings(BaseSettings):
 
     # When set, FastAPI requires Bearer / X-API-Key on protected routes.
     seo_api_key: str | None = Field(default=None, validation_alias="SEO_API_KEY")
+    # FP-6 lite — per-client keys bound to account_id (JSON or id=key,id2=key2).
+    # Admin SEO_API_KEY still has wildcard access when set.
+    seo_api_clients: str | None = Field(
+        default=None, validation_alias="SEO_API_CLIENTS"
+    )
 
     gsc_client_secrets_file: str | None = Field(
         default=None, validation_alias="GSC_CLIENT_SECRETS_FILE"

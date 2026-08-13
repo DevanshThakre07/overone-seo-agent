@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.dependencies import get_job_runner
 from app.api.job_handlers import run_audit_job
 from app.api.jobs import JobRunner
+from app.api.principals import require_account_access
 from app.api.schemas import AuditRequest, AuditSummaryResponse, JobResponse
 from app.logging import get_logger, log_event
 
@@ -15,8 +16,10 @@ logger = get_logger(__name__)
 @router.post("/audit", response_model=AuditSummaryResponse)
 def create_audit(
     payload: AuditRequest,
+    request: Request,
     jobs: JobRunner = Depends(get_job_runner),
 ) -> AuditSummaryResponse:
+    require_account_access(request, payload.gsc_account_id)
     log_event(logger, "api_audit_requested", url=str(payload.url), background=payload.background)
 
     if payload.background:

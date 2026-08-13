@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.api.dependencies import get_gsc_service
+from app.api.principals import require_account_access
 from app.integrations.google.oauth import GoogleOAuthError
 from app.integrations.google.oauth_production import production_checklist
 from app.integrations.google.search_console import SearchConsoleError
@@ -42,6 +43,8 @@ def google_connect_start(
     ),
     gsc: GoogleSearchConsoleService = Depends(get_gsc_service),
 ):
+    # Browser OAuth start stays public; use opaque account_ids + client API keys
+    # for data routes. See require_account_access on /gsc/* and /ga4/*.
     try:
         started = gsc.start_connect(
             account_id.strip() or "default",
@@ -184,10 +187,13 @@ def google_connect_callback(
 
 @router.get("/auth/google/status")
 def google_connect_status(
+    request: Request,
     account_id: str = Query("default"),
     gsc: GoogleSearchConsoleService = Depends(get_gsc_service),
 ):
-    return gsc.status(account_id.strip() or "default")
+    aid = account_id.strip() or "default"
+    require_account_access(request, aid)
+    return gsc.status(aid)
 
 
 @router.get("/auth/google/production")
@@ -269,19 +275,25 @@ def privacy_policy(gsc: GoogleSearchConsoleService = Depends(get_gsc_service)):
 
 @router.post("/auth/google/disconnect")
 def google_disconnect(
+    request: Request,
     account_id: str = Query("default"),
     gsc: GoogleSearchConsoleService = Depends(get_gsc_service),
 ):
-    return gsc.disconnect(account_id.strip() or "default")
+    aid = account_id.strip() or "default"
+    require_account_access(request, aid)
+    return gsc.disconnect(aid)
 
 
 @router.get("/gsc/sites")
 def gsc_sites(
+    request: Request,
     account_id: str = Query(...),
     gsc: GoogleSearchConsoleService = Depends(get_gsc_service),
 ):
+    aid = account_id.strip()
+    require_account_access(request, aid)
     try:
-        return gsc.list_sites(account_id.strip())
+        return gsc.list_sites(aid)
     except GoogleOAuthError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     except SearchConsoleError as exc:
@@ -290,15 +302,18 @@ def gsc_sites(
 
 @router.get("/gsc/performance")
 def gsc_performance(
+    request: Request,
     account_id: str = Query(...),
     site_url: str = Query(...),
     days: int = Query(28, ge=1, le=90),
     top_n: int = Query(20, ge=1, le=50),
     gsc: GoogleSearchConsoleService = Depends(get_gsc_service),
 ):
+    aid = account_id.strip()
+    require_account_access(request, aid)
     try:
         return gsc.performance(
-            account_id.strip(),
+            aid,
             site_url.strip(),
             days=days,
             top_n=top_n,

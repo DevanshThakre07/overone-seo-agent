@@ -22,7 +22,7 @@ Nothing here invents data — empty panels mean that signal was not run or is un
 |--------|----------------|
 | **Site URL** | The website you’re auditing. |
 | **Google account_id** | Your Connect Google nickname (e.g. `demo`) so GSC/GA4 can load. |
-| **API key** | Password so the server allows audits (from `SEO-Agent/.env` → `SEO_API_KEY`). |
+| **API key** | Password so the server allows audits (`SEO_API_KEY` admin, or a per-client key from `SEO_API_CLIENTS`). |
 | **GA4 property** | Which Analytics property to pull traffic from. |
 | **Load dashboard** | Show the last saved results for this URL. |
 | **Run audit** | Crawl the site again and refresh the report. |

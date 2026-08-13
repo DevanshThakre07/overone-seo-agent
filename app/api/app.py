@@ -10,6 +10,7 @@ from starlette.responses import JSONResponse, RedirectResponse
 
 from app import __version__
 from app.api.auth import api_key_configured, enforce_api_key
+from app.api.principals import client_isolation_enabled
 from app.api.routes import (
     alerts,
     audit,
@@ -83,10 +84,13 @@ def create_app() -> FastAPI:
             "set GSC_OAUTH_PUBLISHING_STATUS=production after Google Cloud Publish. "
             "PDF: GET /report/{id}?format=pdf or /share/{token}?format=pdf "
             "(pip install 'seo-agent[pdf]'). "
-            "When SEO_API_KEY is set, protected routes require Bearer or X-API-Key. "
+            "When SEO_API_KEY or SEO_API_CLIENTS is set, protected routes require "
+            "Bearer or X-API-Key. Client keys (SEO_API_CLIENTS) are bound to one "
+            "account_id (FP-6 lite). GET /auth/me shows the caller principal. "
             "Authenticated crawl uses in-memory cookies on GET/HEAD only; "
             "GET /crawl/login-wall dry-runs login detection without credentials."
         ),
+
         version=__version__,
         lifespan=lifespan,
     )
@@ -103,7 +107,15 @@ def create_app() -> FastAPI:
             "status": "ok",
             "version": __version__,
             "api_auth_required": api_key_configured(),
+            "client_isolation": client_isolation_enabled(),
         }
+
+    @application.get("/auth/me")
+    def auth_me(request: Request) -> dict:
+        """Return the authenticated principal (admin or client-bound account_id)."""
+        from app.api.principals import get_principal, principal_public_dict
+
+        return principal_public_dict(get_principal(request))
 
     application.include_router(audit.router)
     application.include_router(optimize.router)

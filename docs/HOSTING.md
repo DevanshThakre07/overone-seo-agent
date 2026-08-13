@@ -15,7 +15,7 @@ Put the FastAPI `seo-api` on **HTTPS** so clients (and you) stop depending on a 
 | Durable storage | Volume for SQLite **or** `SEO_DATABASE_URL` Postgres |
 | SPA crawls (Actoro) | Image includes Playwright Chromium |
 | PDF | Image includes `seo-agent[pdf]` |
-| API lock | Set `SEO_API_KEY` in production |
+| API lock | Set `SEO_API_KEY` in production; optional `SEO_API_CLIENTS` for per-client keys |
 | Google Connect | Set `GSC_REDIRECT_URI=https://YOUR_DOMAIN/auth/callback` + add that URI in Google Cloud |
 
 After Host is live → **FP-3** (Publish OAuth consent) → thin client / Stripe.
@@ -37,7 +37,9 @@ open "http://127.0.0.1:8000/dashboard/ui?url=https://actoro.app/&gsc_account_id=
 Copy from `.env.example`, then set:
 
 ```bash
-SEO_API_KEY=...                 # required when exposed
+SEO_API_KEY=...                 # required when exposed (admin / wildcard)
+# Optional FP-6 lite — per-client keys bound to account_id:
+# SEO_API_CLIENTS={"demo":"<client-key>","acme":"<other-key>"}
 PORT=8000                       # platforms often inject PORT
 SEO_STORAGE_PATH=/data/audits.db
 # or:

@@ -1,4 +1,4 @@
-"""Inbound API authentication (SEO_API_KEY)."""
+"""Inbound API authentication (SEO_API_KEY + SEO_API_CLIENTS)."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import secrets
 
 from fastapi import HTTPException, Request, status
 
+from app.api.principals import SeoPrincipal, client_map
 from app.config.settings import get_settings
 
 # Browser OAuth redirects cannot send Authorization headers.
@@ -20,14 +21,24 @@ _PUBLIC_PATH_PREFIXES = (
     "/legal",
     # Phase 3 — client-facing surfaces (no API key in browser)
     "/share",
-    "/dashboard",
+    # HTML shell only — JSON /dashboard requires a key when auth is on
+    "/dashboard/ui",
     "/alerts/status",
 )
 
 
+def _secure_eq(provided: str, expected: str) -> bool:
+    if not provided or not expected or len(provided) != len(expected):
+        return False
+    return secrets.compare_digest(provided, expected)
+
+
 def api_key_configured() -> bool:
-    key = (get_settings().seo_api_key or "").strip()
-    return bool(key)
+    """True when any inbound API key (admin or client) is configured."""
+    settings = get_settings()
+    if (settings.seo_api_key or "").strip():
+        return True
+    return bool(client_map())
 
 
 def _extract_api_key(request: Request) -> str | None:
@@ -42,6 +53,22 @@ def _extract_api_key(request: Request) -> str | None:
     return None
 
 
+def resolve_principal(provided: str) -> SeoPrincipal | None:
+    """Match provided key to admin SEO_API_KEY or a SEO_API_CLIENTS entry."""
+    admin = (get_settings().seo_api_key or "").strip()
+    if admin and _secure_eq(provided, admin):
+        return SeoPrincipal(role="admin", account_id=None, label="admin")
+
+    for account_id, key in client_map().items():
+        if _secure_eq(provided, key):
+            return SeoPrincipal(
+                role="client",
+                account_id=account_id,
+                label=account_id,
+            )
+    return None
+
+
 def is_public_path(path: str) -> bool:
     path = path.rstrip("/") or "/"
     if path == "/" or path == "/health":
@@ -51,32 +78,46 @@ def is_public_path(path: str) -> bool:
             continue
         if path == prefix or path.startswith(prefix + "/"):
             return True
-        # /docs and /redoc may be exact or with trailing slash already handled
         if path == prefix.rstrip("/"):
             return True
     return False
 
 
 async def enforce_api_key(request: Request) -> None:
-    """Reject protected routes when SEO_API_KEY is set and the request lacks it.
+    """Reject protected routes when keys are set and the request lacks a match.
 
-    When SEO_API_KEY is unset, auth is disabled (local/dev). Production should
-    always set the key.
+    When neither SEO_API_KEY nor SEO_API_CLIENTS is set, auth is disabled
+    (local/dev). Production should always set at least SEO_API_KEY.
+    On success, sets request.state.seo_principal.
     """
+    request.state.seo_principal = None
+
     if is_public_path(request.url.path):
         return
 
-    expected = (get_settings().seo_api_key or "").strip()
-    if not expected:
+    if not api_key_configured():
         return
 
     provided = _extract_api_key(request)
-    if not provided or not secrets.compare_digest(provided, expected):
+    if not provided:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=(
-                "Missing or invalid API key. Pass Authorization: Bearer <SEO_API_KEY> "
-                "or X-API-Key: <SEO_API_KEY>."
+                "Missing or invalid API key. Pass Authorization: Bearer <key> "
+                "or X-API-Key: <key>."
             ),
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    principal = resolve_principal(provided)
+    if principal is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Missing or invalid API key. Pass Authorization: Bearer <key> "
+                "or X-API-Key: <key>."
+            ),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    request.state.seo_principal = principal

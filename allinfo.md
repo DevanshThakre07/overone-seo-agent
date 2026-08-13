@@ -270,15 +270,20 @@ seo-api
 | http://localhost:8000/dashboard/ui?url=https://example.com/ | Dashboard |
 | http://localhost:8000/ | Redirects to dashboard |
 
-If `SEO_API_KEY` is set, protected routes need:
+If `SEO_API_KEY` and/or `SEO_API_CLIENTS` is set, protected routes need:
 
 ```http
-Authorization: Bearer <SEO_API_KEY>
+Authorization: Bearer <key>
 # or
-X-API-Key: <SEO_API_KEY>
+X-API-Key: <key>
 ```
 
-The dashboard has an **API key** field that stores the key in the browser for subsequent calls.
+- **`SEO_API_KEY`** — admin / wildcard (any `account_id`).
+- **`SEO_API_CLIENTS`** — FP-6 lite map of `account_id` → client key (JSON or `id=key,id2=key2`). Client keys cannot read another customer's GSC/GA4/`gsc_account_id`.
+- **`GET /auth/me`** — returns `{role, account_id}` for the caller.
+- **`/dashboard/ui`** stays public; **`GET /dashboard`** JSON requires a key when auth is on.
+
+The dashboard has an **API key** field that stores the key in the browser for subsequent calls (including Load dashboard).
 
 ### 8.3 Docker
 
@@ -307,7 +312,7 @@ Every panel has an **i** help popover. Full beginner labels: `docs/understand.md
 |---------|----------------|
 | **Site URL** | Seed URL to audit / load |
 | **Google account_id** | Connect Google nickname for GSC/GA4 |
-| **API key** | Matches server `SEO_API_KEY` |
+| **API key** | Matches server `SEO_API_KEY` (admin) or a `SEO_API_CLIENTS` key |
 | **GA4 property** | Pick + save preferred property |
 | **Load dashboard** | Assemble last saved signals for URL |
 | **Run audit** | Crawl + analyze + enrich (per options) |

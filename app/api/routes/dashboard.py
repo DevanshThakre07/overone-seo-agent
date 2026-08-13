@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
+from app.api.principals import require_account_access
 from app.services.dashboard_service import DashboardService
 
 router = APIRouter(tags=["dashboard"])
@@ -16,6 +17,7 @@ _STATIC = Path(__file__).resolve().parents[2] / "static" / "dashboard.html"
 
 @router.get("/dashboard")
 def dashboard_json(
+    request: Request,
     url: str = Query(..., description="Site URL"),
     trend_limit: int = Query(12, ge=2, le=50),
     gsc_account_id: str | None = Query(
@@ -27,6 +29,7 @@ def dashboard_json(
 ):
     if not url.strip():
         raise HTTPException(status_code=400, detail="url is required")
+    require_account_access(request, gsc_account_id)
     return DashboardService().build(
         url,
         trend_limit=trend_limit,
